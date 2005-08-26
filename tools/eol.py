@@ -30,6 +30,8 @@
     Please report inadequacies to Trent Mick <trentm at google's mail thing>.
 """
 #TODO:
+# - --pretty or --align or something for nicer output
+# - skip non-text files by default?
 # - s/eol_type/eol/g and then must s/eol.py/something-else.py/g ???
 # - s/name/eol_name/?, s/shortcut/eol_shortname/? or something else
 # - shortcut_from_eol_type()?
