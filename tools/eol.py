@@ -30,6 +30,9 @@
     Please report inadequacies to Trent Mick <trentm at google's mail thing>.
 """
 #TODO:
+# - a better interface for the conversion:
+#   How about either 2crlf, 2lf, etc. stubs or allow eol.py to react to
+#   a argv[0] name difference: 2crlf, 2lf, dos2unix, et al
 # - --pretty or --align or something for nicer output
 # - skip non-text files by default?
 # - s/eol_type/eol/g and then must s/eol.py/something-else.py/g ???
