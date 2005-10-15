@@ -225,7 +225,7 @@ def convert_text_eol_type(text, eol_type):
     return re.sub('\r\n|\r|\n', eol_type, text)
 
 
-def convert_path_eol_type(path, eol_type):
+def convert_path_eol_type(path, eol_type, log=log):
     """convert_path_eol_type(PATH, EOL-TYPE)
     
     Convert the given file (in-place) to the given EOL type. If no
