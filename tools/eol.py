@@ -31,8 +31,11 @@
 """
 #TODO:
 # - a better interface for the conversion:
-#   How about either 2crlf, 2lf, etc. stubs or allow eol.py to react to
-#   a argv[0] name difference: 2crlf, 2lf, dos2unix, et al
+#   - How about either 2crlf, 2lf, etc. stubs or allow eol.py to react
+#     to a argv[0] name difference: 2crlf, 2lf, dos2unix, et al
+#   - How about a "-f|--fix" shortcut for "-C NATIVE":
+#       eol -f foo.py
+#     Might want to save '-f' for force and use another letter.
 # - --pretty or --align or something for nicer output
 # - skip non-text files by default?
 # - s/eol_type/eol/g and then must s/eol.py/something-else.py/g ???
