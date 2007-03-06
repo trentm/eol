@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2005 ActiveState Corp.
+# Copyright (c) 2005-2007 ActiveState Software Inc.
 #
 # Authors:
 #   Trent Mick (trentm at google's mail thing)
@@ -29,15 +29,23 @@
 
     Please report inadequacies to Trent Mick <trentm at google's mail thing>.
 """
+# Nomenclature: (TODO)
+#   eol                 the actual EOL string: '\n', '\r\n' or '\r'
+#   eol-name            the EOL name: 'LF', 'CRLF' or 'CR'
+#   eol-english-name    TODO
+#
 #TODO:
+# - recursive option (paths recipe)
+# - skip non-text files by default?
+#   Just use simple nul-detection for now. Given contentinfo can do
+#   better with weird encodings.
 # - a better interface for the conversion:
 #   - How about either 2crlf, 2lf, etc. stubs or allow eol.py to react
 #     to a argv[0] name difference: 2crlf, 2lf, dos2unix, et al
 #   - How about a "-f|--fix" shortcut for "-C NATIVE":
 #       eol -f foo.py
 #     Might want to save '-f' for force and use another letter.
-# - --pretty or --align or something for nicer output
-# - skip non-text files by default?
+# - convert to optparse
 # - s/eol_type/eol/g and then must s/eol.py/something-else.py/g ???
 # - s/name/eol_name/?, s/shortcut/eol_shortname/? or something else
 # - shortcut_from_eol_type()?
@@ -61,7 +69,7 @@
 
 
 __revision__ = "$Id$"
-__version_info__ = (0, 2, 0)
+__version_info__ = (0, 3, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -199,22 +207,39 @@ def eol_info_from_text(text):
     else:
         return (eols[-1][-1], eols[-1][-1])
 
-
-def eol_info_from_file(file):
-    """eol_info_from_file(PATH-OR-STREAM) -> (EOL-TYPE, SUGGESTED-EOL)
+def eol_info_from_stream(stream):
+    """eol_info_from_stream(<stream>) -> (<eol>, <suggested-eol>)
     
-    Return EOL info for the given file path (or file stream).
+    Return EOL info for the given file stream.
     See eol_info_from_text() docstring for details.
     """
-    if isinstance(file, basestring):
-        fin = open(file, "rb")
-        try:
-            content = fin.read()
-        finally:
-            fin.close()
-    else:
-        content = file.read()
+    return eol_info_from_text(stream.read())
+
+def eol_info_from_path(path):
+    """eol_info_from_path(<path>) -> (<eol>, <suggested-eol>)
+    
+    Return EOL info for the given file path.
+    See eol_info_from_text() docstring for details.
+    """
+    fin = open(path, "rb")
+    try:
+        content = fin.read()
+    finally:
+        fin.close()
     return eol_info_from_text(content) 
+
+def eol_info_from_path_patterns(path_patterns, recursive=False,
+                                excludes=[]):
+    """Generate EOL info for the given paths.
+    
+    Yields 3-tuples: (PATH, EOL, SUGGESTED-EOL)
+    See eol_info_from_text() docstring for details.
+    """
+    for path in _paths_from_path_patterns(path_patterns,
+                                          recursive=recursive,
+                                          excludes=excludes):
+        eol, suggested_eol = eol_info_from_path(path)
+        yield path, eol, suggested_eol
 
 
 def convert_text_eol_type(text, eol_type):
@@ -248,19 +273,6 @@ def convert_path_eol_type(path, eol_type, log=log):
             fout.write(converted)
         finally:
             fout.close()
-
-
-def list_path_eol_type(path):
-    try:
-        st = os.stat(path)
-    except OSError, ex:
-        #XXX Should use unicode-safe stringification here.
-        log.error(str(ex))
-        return
-    if stat.S_ISREG(st.st_mode): # skip non-files (a la grep)
-        eol_type = eol_info_from_file(path)[0]
-        eol_name = name_from_eol_type(eol_type)
-        log.info("%s: %s", path, eol_name)
 
 
 def mixed_eol_lines_in_text(text, eol_type=None):
@@ -312,7 +324,166 @@ def mixed_eol_lines_in_text(text, eol_type=None):
 
 #---- internal support stuff
 
-#TODO: refer to my recipe for this
+# Recipe: paths_from_path_patterns (0.3.5)
+def _should_include_path(path, includes, excludes):
+    """Return True iff the given path should be included."""
+    from os.path import basename
+    from fnmatch import fnmatch
+
+    base = basename(path)
+    if includes:
+        for include in includes:
+            if fnmatch(base, include):
+                try:
+                    log.debug("include `%s' (matches `%s')", path, include)
+                except (NameError, AttributeError):
+                    pass
+                break
+        else:
+            log.debug("exclude `%s' (matches no includes)", path)
+            return False
+    for exclude in excludes:
+        if fnmatch(base, exclude):
+            try:
+                log.debug("exclude `%s' (matches `%s')", path, exclude)
+            except (NameError, AttributeError):
+                pass
+            return False
+    return True
+
+_NOT_SPECIFIED = ("NOT", "SPECIFIED")
+def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
+                              recursive=True, includes=[], excludes=[],
+                              on_error=_NOT_SPECIFIED):
+    """_paths_from_path_patterns([<path-patterns>, ...]) -> file paths
+
+    Generate a list of paths (files and/or dirs) represented by the given path
+    patterns.
+
+        "path_patterns" is a list of paths optionally using the '*', '?' and
+            '[seq]' glob patterns.
+        "files" is boolean (default True) indicating if file paths
+            should be yielded
+        "dirs" is string indicating under what conditions dirs are
+            yielded. It must be one of:
+              never             (default) never yield dirs
+              always            yield all dirs matching given patterns
+              if-not-recursive  only yield dirs for invocations when
+                                recursive=False
+            See use cases below for more details.
+        "recursive" is boolean (default True) indicating if paths should
+            be recursively yielded under given dirs.
+        "includes" is a list of file patterns to include in recursive
+            searches.
+        "excludes" is a list of file and dir patterns to exclude.
+            (Note: This is slightly different than GNU grep's --exclude
+            option which only excludes *files*.  I.e. you cannot exclude
+            a ".svn" dir.)
+        "on_error" is an error callback called when a given path pattern
+            matches nothing:
+                on_error(PATH_PATTERN)
+            If not specified, the default is look for a "log" global and
+            call:
+                log.error("`%s': No such file or directory")
+            Specify None to do nothing.
+
+    Typically this is useful for a command-line tool that takes a list
+    of paths as arguments. (For Unix-heads: the shell on Windows does
+    NOT expand glob chars, that is left to the app.)
+
+    Use case #1: like `grep -r`
+      {files=True, dirs='never', recursive=(if '-r' in opts)}
+        script FILE     # yield FILE, else call on_error(FILE)
+        script DIR      # yield nothing
+        script PATH*    # yield all files matching PATH*; if none,
+                        # call on_error(PATH*) callback
+        script -r DIR   # yield files (not dirs) recursively under DIR
+        script -r PATH* # yield files matching PATH* and files recursively
+                        # under dirs matching PATH*; if none, call
+                        # on_error(PATH*) callback
+
+    Use case #2: like `file -r` (if it had a recursive option)
+      {files=True, dirs='if-not-recursive', recursive=(if '-r' in opts)}
+        script FILE     # yield FILE, else call on_error(FILE)
+        script DIR      # yield DIR, else call on_error(DIR)
+        script PATH*    # yield all files and dirs matching PATH*; if none,
+                        # call on_error(PATH*) callback
+        script -r DIR   # yield files (not dirs) recursively under DIR
+        script -r PATH* # yield files matching PATH* and files recursively
+                        # under dirs matching PATH*; if none, call
+                        # on_error(PATH*) callback
+
+    Use case #3: kind of like `find .`
+      {files=True, dirs='always', recursive=(if '-r' in opts)}
+        script FILE     # yield FILE, else call on_error(FILE)
+        script DIR      # yield DIR, else call on_error(DIR)
+        script PATH*    # yield all files and dirs matching PATH*; if none,
+                        # call on_error(PATH*) callback
+        script -r DIR   # yield files and dirs recursively under DIR
+                        # (including DIR)
+        script -r PATH* # yield files and dirs matching PATH* and recursively
+                        # under dirs; if none, call on_error(PATH*)
+                        # callback
+    """
+    from os.path import basename, exists, isdir, join
+    from glob import glob
+
+    GLOB_CHARS = '*?['
+
+    for path_pattern in path_patterns:
+        # Determine the set of paths matching this path_pattern.
+        for glob_char in GLOB_CHARS:
+            if glob_char in path_pattern:
+                paths = glob(path_pattern)
+                break
+        else:
+            paths = exists(path_pattern) and [path_pattern] or []
+        if not paths:
+            if on_error is None:
+                pass
+            elif on_error is _NOT_SPECIFIED:
+                try:
+                    log.error("`%s': No such file or directory", path_pattern)
+                except (NameError, AttributeError):
+                    pass
+            else:
+                on_error(path_pattern)
+
+        for path in paths:
+            if isdir(path):
+                # 'includes' SHOULD affect whether a dir is yielded.
+                if (dirs == "always"
+                    or (dirs == "if-not-recursive" and not recursive)
+                   ) and _should_include_path(path, includes, excludes):
+                    yield path
+
+                # However, if recursive, 'includes' should NOT affect
+                # whether a dir is recursed into. Otherwise you could
+                # not:
+                #   script -r --include="*.py" DIR
+                if recursive and _should_include_path(path, [], excludes):
+                    for dirpath, dirnames, filenames in os.walk(path):
+                        dir_indeces_to_remove = []
+                        for i, dirname in enumerate(dirnames):
+                            d = join(dirpath, dirname)
+                            if dirs == "always" \
+                               and _should_include_path(d, includes, excludes):
+                                yield d
+                            if not _should_include_path(d, [], excludes):
+                                dir_indeces_to_remove.append(i)
+                        for i in reversed(dir_indeces_to_remove):
+                            del dirnames[i]
+                        if files:
+                            for filename in sorted(filenames):
+                                f = join(dirpath, filename)
+                                if _should_include_path(f, includes, excludes):
+                                    yield f
+
+            elif files and _should_include_path(path, includes, excludes):
+                yield path
+
+
+# Recipe: pretty_logging (0.1.2)
 class _PerLevelFormatter(logging.Formatter):
     """Allow multiple format string -- depending on the log level.
     
@@ -327,7 +498,7 @@ class _PerLevelFormatter(logging.Formatter):
         else:
             self.fmtFromLevel = fmtFromLevel
     def format(self, record):
-        record.levelname = record.levelname.lower()
+        record.lowerlevelname = record.levelname.lower()
         if record.levelno in self.fmtFromLevel:
             #XXX This is a non-threadsafe HACK. Really the base Formatter
             #    class should provide a hook accessor for the _fmt
@@ -341,32 +512,34 @@ class _PerLevelFormatter(logging.Formatter):
         else:
             return logging.Formatter.format(self, record)
 
-def _setupLogging():
+def _setup_logging():
     hdlr = logging.StreamHandler()
-    defaultFmt = "%(name)s: %(levelname)s: %(message)s"
-    infoFmt = "%(name)s: %(message)s"
+    defaultFmt = "%(name)s: %(lowerlevelname)s: %(message)s"
+    infoFmt = "%(message)s"
     fmtr = _PerLevelFormatter(fmt=defaultFmt,
                               fmtFromLevel={logging.INFO: infoFmt})
     hdlr.setFormatter(fmtr)
     logging.root.addHandler(hdlr)
-    log.setLevel(logging.INFO)
-    
+
 
 #---- mainline
 
 def main(argv):
-    _setupLogging()
+    _setup_logging()
+    log.setLevel(logging.INFO)
 
     # Parse options.
     try:
-        opts, patterns = getopt.getopt(argv[1:], "VvqhC:",
+        opts, path_patterns = getopt.getopt(argv[1:], "VvqhrC:x:",
             ["version", "verbose", "quiet", "help", "test",
-             "convert="])
+             "recursive", "convert=", "skip="])
     except getopt.GetoptError, ex:
         log.error(str(ex))
         log.error("Try `eol --help'.")
         return 1
+    recursive = False
     action = "list"
+    excludes = []
     for opt, optarg in opts:
         if opt in ("-h", "--help"):
             sys.stdout.write(__doc__)
@@ -383,12 +556,27 @@ def main(argv):
         elif opt in ("-C", "--convert"):
             eol_type = eol_type_from_shortcut(optarg.upper())
             action = "convert"
+        elif opt in ("-r", "--recursive"):
+            recursive = True
+        elif opt in ("-x", "--skip"):
+            excludes.append(optarg)
 
     if action == "test":
         log.debug("run eol.py self-test...")
         import doctest
-        doctest.testmod()
-        return
+        doctest.testmod() # TODO: return non-zero on failure?
+        return 0
+    elif action == "list":
+        for path, eol, suggested_eol \
+                in eol_info_from_path_patterns(path_patterns, recursive,
+                                               excludes):
+            log.info("%s: %s", path, name_from_eol_type(eol))
+    elif action == "convert":
+        TODO
+        eol_convert(path_patterns)
+    return 0
+
+    TODO
     if not patterns:
         log.error("no files specified (see `eol --help' for usage)")
         return 1
@@ -406,7 +594,6 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    if sys.version_info[:2] <= (2,2): __file__ = sys.argv[0]
     try:
         retval = main(sys.argv)
     except KeyboardInterrupt:
