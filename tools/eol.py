@@ -8,8 +8,8 @@
     eol - a tool for working with EOLs in text files
 
     Usage:
-        eol FILE...                 # list EOL-type of file(s)
-        eol -C LF|CRLF|... FILE...  # convert file(s) to SHORTCUT EOL type
+        eol FILE...             # list EOL of file(s)
+        eol -c NAME FILE...     # convert file(s) to given EOL
 
     Options:
         -h, --help          dump this help and exit
@@ -18,10 +18,13 @@
         -q, --quiet         quiet output (only warnings and errors)
         --test              run self-test and exit (use 'eol.py -v --test' for
                             verbose test output)
-        -C SHORTCUT, --convert SHORTCUT
-                            convert file(s) to the given EOL type;
-                            SHORTCUT must be one of "LF", "CRLF", "CR"
-                            or "NATIVE" (case-insensitive)
+
+        -c|--convert NAME   convert file(s) to the given EOL; NAME must be
+                            one of "LF", "CRLF", "CR" or "NATIVE"
+                            (case-insensitive)
+        -r, --recursive     recursive search directories
+        -x|--skip PATTERN   patterns to exclude in determining files
+                            
 
     `eol` is a tool for working with EOLs in text files: determining the
     EOL type and converting between types. `eol.py` can also be used as
@@ -31,26 +34,15 @@
 """
 # Nomenclature: (TODO)
 #   eol                 the actual EOL string: '\n', '\r\n' or '\r'
-#   eol-name            the EOL name: 'LF', 'CRLF' or 'CR'
-#   eol-english-name    TODO
+#   eol-name            the EOL name: 'LF', 'CRLF', 'CR', 'NATIVE' or 'MIXED'
+#   eol-english-name    English representation, e.g.: 'Windows (CRLF)'
 #
 #TODO:
-# - recursive option (paths recipe)
 # - skip non-text files by default?
 #   Just use simple nul-detection for now. Given contentinfo can do
 #   better with weird encodings.
-# - a better interface for the conversion:
-#   - How about either 2crlf, 2lf, etc. stubs or allow eol.py to react
-#     to a argv[0] name difference: 2crlf, 2lf, dos2unix, et al
-#   - How about a "-f|--fix" shortcut for "-C NATIVE":
-#       eol -f foo.py
-#     Might want to save '-f' for force and use another letter.
-# - convert to optparse
-# - s/eol_type/eol/g and then must s/eol.py/something-else.py/g ???
-# - s/name/eol_name/?, s/shortcut/eol_shortname/? or something else
-# - shortcut_from_eol_type()?
-# - add doctests to convert_text_eol_type()
 # - any other conversions to take from eollib.py?
+# - convert to optparse
 # - module usage docstring and move command-line docstring
 # - Add 'hint' for the suggested eol in eol_info_from_text()? Useful for
 #   Komodo if there is a pref.
@@ -85,7 +77,6 @@ import stat
 
 log = logging.getLogger("eol")
 
-# The EOL types
 CR = "\r"
 LF = "\n"
 CRLF = "\r\n"
@@ -95,87 +86,97 @@ else:
     # Yes, LF is the native EOL even on Mac OS X. CR is just for
     # Mac OS <=9 (a.k.a. "Mac Classic")
     NATIVE = LF
-class MIXED:
-    """EOL-type for files with mixed EOLs"""
+class MIXED(object):
+    """EOL for files with mixed EOLs"""
     pass
+
+_english_name_from_eol = {
+    CRLF : "Windows (CRLF)",
+    CR   : "Mac Classic (CR)",
+    LF   : "Unix (LF)",
+    MIXED: "Mixed",
+    None : "No EOLs"
+}
+_eol_from_name = {
+    "CRLF"  : CRLF,
+    "CR"    : CR,
+    "LF"    : LF,
+    "NATIVE": NATIVE,
+}
+_name_from_eol = {
+    CRLF: "CRLF",
+    CR  : "CR",
+    LF  : "LF"
+}
 
 
 
 #---- public module interface
 
-def name_from_eol_type(eol_type):
-    r"""name_from_eol_type(eol_type) -> English description for EOL type
+def english_name_from_eol(eol):
+    r"""english_name_from_eol(EOL) -> English description for EOL
 
-        >>> name_from_eol_type(LF)
+        >>> english_name_from_eol(LF)
         'Unix (LF)'
-        >>> name_from_eol_type('\r\n')
+        >>> english_name_from_eol('\r\n')
         'Windows (CRLF)'
-        >>> name_from_eol_type(CR)
+        >>> english_name_from_eol(CR)
         'Mac Classic (CR)'
-        >>> name_from_eol_type(MIXED)
+        >>> english_name_from_eol(MIXED)
         'Mixed'
-        >>> name_from_eol_type(None)
+        >>> english_name_from_eol(None)
         'No EOLs'
     """
     try:
-        return {CRLF : "Windows (CRLF)",
-                CR   : "Mac Classic (CR)",
-                LF   : "Unix (LF)",
-                MIXED: "Mixed",
-                None : "No EOLs"}[eol_type]
+        return _english_name_from_eol[eol]
     except KeyError:
-        raise ValueError("unknown EOL type: %r" % eol_type)
+        raise ValueError("unknown EOL: %r" % eol)
 
 
-def eol_type_from_shortcut(shortcut):
-    r"""eol_type_from_shortcut(SHORTCUT) -> EOL type for this
+def eol_from_name(name):
+    r"""eol_from_name(NAME) -> EOL for this
 
-     Return the EOL type for the given shortcut string:
+     Return the EOL for the given name:
 
-        >>> eol_type_from_shortcut("LF")
+        >>> eol_from_name("LF")
         '\n'
-        >>> eol_type_from_shortcut("CRLF")
+        >>> eol_from_name("CRLF")
         '\r\n'
-        >>> eol_type_from_shortcut("CR")
+        >>> eol_from_name("CR")
         '\r'
-        >>> eol_type_from_shortcut("CRLF") == CRLF
+        >>> eol_from_name("CRLF") == CRLF
         True
-        >>> eol_type_from_shortcut("NATIVE") == NATIVE
+        >>> eol_from_name("NATIVE") == NATIVE
         True
     """
     try:
-        return {"CRLF"  : CRLF,
-                "CR"    : CR,
-                "LF"    : LF,
-                "NATIVE": NATIVE}[shortcut]
+        return _eol_from_name[name]
     except KeyError:
-        raise ValueError("unknown EOL shortcut: %r" % eol_type)
+        raise ValueError("unknown EOL name: %r" % name)
 
-def shortcut_from_eol_type(eol_type):
-    r"""shortcut_from_eol_type(EOL-TYPE) -> EOL shortcut for this
+def name_from_eol(eol):
+    r"""name_from_eol(EOL) -> EOL name for this
 
      Return the EOL shortcut string for the given EOL type:
 
-        >>> shortcut_from_eol_type("\n")
+        >>> name_from_eol("\n")
         'LF'
-        >>> shortcut_from_eol_type("\r\n")
+        >>> name_from_eol("\r\n")
         'CRLF'
-        >>> shortcut_from_eol_type("\r")
+        >>> name_from_eol("\r")
         'CR'
     """
     try:
-        return {CRLF: "CRLF",
-                CR  : "CR",
-                LF  : "LF"}[eol_type]
+        return _name_from_eol[eol]
     except KeyError:
-        raise ValueError("unknown EOL type: %r" % eol_type)
+        raise ValueError("unknown EOL: %r" % eol)
 
 
 def eol_info_from_text(text):
-    r"""eol_info_from_text(text) -> (EOL-TYPE, SUGGESTED-EOL)
+    r"""eol_info_from_text(TEXT) -> (EOL, SUGGESTED-EOL)
     
     Return a 2-tuple containing:
-    1) The detected end-of-line type: one of CR, LF, CRLF, MIXED or None.
+    1) The detected end-of-line: one of CR, LF, CRLF, MIXED or None.
     2) The suggested end-of-line to use for this text: one of CR, LF or
        CRLF. This is the typically the most common EOL used in the text,
        preferring the native EOL when ambiguous.
@@ -208,7 +209,7 @@ def eol_info_from_text(text):
         return (eols[-1][-1], eols[-1][-1])
 
 def eol_info_from_stream(stream):
-    """eol_info_from_stream(<stream>) -> (<eol>, <suggested-eol>)
+    """eol_info_from_stream(STREAM) -> (EOL, SUGGESTED-EOL)
     
     Return EOL info for the given file stream.
     See eol_info_from_text() docstring for details.
@@ -216,7 +217,7 @@ def eol_info_from_stream(stream):
     return eol_info_from_text(stream.read())
 
 def eol_info_from_path(path):
-    """eol_info_from_path(<path>) -> (<eol>, <suggested-eol>)
+    """eol_info_from_stream(PATH) -> (EOL, SUGGESTED-EOL)
     
     Return EOL info for the given file path.
     See eol_info_from_text() docstring for details.
@@ -242,21 +243,27 @@ def eol_info_from_path_patterns(path_patterns, recursive=False,
         yield path, eol, suggested_eol
 
 
-def convert_text_eol_type(text, eol_type):
-    """convert_text_eol_type(TEXT, EOL-TYPE) -> converted text
+def convert_text_eol(text, eol):
+    r"""convert_text_eol(TEXT, EOL-TYPE) -> converted text
 
     Convert the given text to the given EOL type.
+
+        >>> s = 'line0\nline1\r\nline2\nline3\nline4\r\nline5'
+        >>> convert_text_eol(s, LF)
+        'line0\nline1\nline2\nline3\nline4\nline5'
+        >>> convert_text_eol(s, CRLF)
+        'line0\r\nline1\r\nline2\r\nline3\r\nline4\r\nline5'
     """
-    if eol_type not in (LF, CRLF, CR):
-        raise ValueError("illegal eol_type: %r" % eol_type)
+    if eol not in (LF, CRLF, CR):
+        raise ValueError("illegal EOL: %r" % eol)
     import re
-    return re.sub('\r\n|\r|\n', eol_type, text)
+    return re.sub('\r\n|\r|\n', eol, text)
 
 
-def convert_path_eol_type(path, eol_type, log=log):
-    """convert_path_eol_type(PATH, EOL-TYPE)
+def convert_path_eol(path, eol, log=log):
+    """convert_path_eol(PATH, EOL)
     
-    Convert the given file (in-place) to the given EOL type. If no
+    Convert the given file (in-place) to the given EOL. If no
     changes are necessary the file is not touched.
     """
     fin = open(path, "rb")
@@ -264,22 +271,23 @@ def convert_path_eol_type(path, eol_type, log=log):
         original = fin.read()
     finally:
         fin.close()
-    converted = convert_text_eol_type(original, eol_type)
+    converted = convert_text_eol(original, eol)
     if original != converted:
-        log.info("convert %s EOLs: %s",
-                 name_from_eol_type(eol_type), path)
+        log.info("converted `%s' to %s EOLs", path, name_from_eol(eol))
         fout = open(path, "wb")
         try:
             fout.write(converted)
         finally:
             fout.close()
+    else:
+        log.debug("skipped `%s': no change required", path)
 
 
-def mixed_eol_lines_in_text(text, eol_type=None):
-    r"""mixed_eol_lines_in_text(TEXT[, EOL-TYPE]) -> LINE-NUMBERS...
+def mixed_eol_lines_in_text(text, eol=None):
+    r"""mixed_eol_lines_in_text(TEXT[, EOL]) -> LINE-NUMBERS...
     
         "text" is the text to analyze
-        "eol_type" indicates the expected EOL for each line: one of LF,
+        "eol" indicates the expected EOL for each line: one of LF,
             CR or CRLF. It may also be left out (or None) to indicate
             that the most common EOL in the text is the expected one.
     
@@ -301,22 +309,22 @@ def mixed_eol_lines_in_text(text, eol_type=None):
         elif line.endswith(CR): CRs.append(i)
 
     # Determine the expected EOL.
-    if eol_type is None:
-        eols = [(len(CRLFs), CRLF == NATIVE, CRLF),
-                (len(CRs),   CR   == NATIVE, CR),
-                (len(LFs),   LF   == NATIVE, LF)]
-        eols.sort() # last in list is the most common, native EOL on a tie
-        eol_type = eols[-1][-1]
+    if eol is None:
+        eol_data = [(len(CRLFs), CRLF == NATIVE, CRLF),
+                    (len(CRs),   CR   == NATIVE, CR),
+                    (len(LFs),   LF   == NATIVE, LF)]
+        eol_data.sort() # last in list is the most common, native EOL on a tie
+        eol = eol_data[-1][-1]
     
     # Get the list of lines with unexpected EOLs.
-    if eol_type == LF:
+    if eol == LF:
         mixed_eol_lines = CRs + CRLFs
-    elif eol_type == CR:
+    elif eol == CR:
         mixed_eol_lines = LFs + CRLFs
-    elif eol_type == CRLF:
+    elif eol == CRLF:
         mixed_eol_lines = CRs + LFs
     else:
-        raise ValueError("illegal 'eol_type' value: %r" % eol_type)
+        raise ValueError("illegal 'eol' value: %r" % eol)
     mixed_eol_lines.sort()
     return mixed_eol_lines
 
@@ -515,11 +523,12 @@ class _PerLevelFormatter(logging.Formatter):
 def _setup_logging():
     hdlr = logging.StreamHandler()
     defaultFmt = "%(name)s: %(lowerlevelname)s: %(message)s"
-    infoFmt = "%(message)s"
-    fmtr = _PerLevelFormatter(fmt=defaultFmt,
-                              fmtFromLevel={logging.INFO: infoFmt})
+    fmtFromLevel = {logging.DEBUG: "%(name)s: %(message)s",
+                    logging.INFO: "%(message)s"}
+    fmtr = _PerLevelFormatter(fmt=defaultFmt, fmtFromLevel=fmtFromLevel)
     hdlr.setFormatter(fmtr)
     logging.root.addHandler(hdlr)
+
 
 
 #---- mainline
@@ -530,7 +539,7 @@ def main(argv):
 
     # Parse options.
     try:
-        opts, path_patterns = getopt.getopt(argv[1:], "VvqhrC:x:",
+        opts, path_patterns = getopt.getopt(argv[1:], "Vvqhrc:x:",
             ["version", "verbose", "quiet", "help", "test",
              "recursive", "convert=", "skip="])
     except getopt.GetoptError, ex:
@@ -553,8 +562,8 @@ def main(argv):
             log.setLevel(logging.WARNING)
         elif opt == "--test":
             action = "test"
-        elif opt in ("-C", "--convert"):
-            eol_type = eol_type_from_shortcut(optarg.upper())
+        elif opt in ("-c", "--convert"):
+            eol_type = eol_from_name(optarg.upper())
             action = "convert"
         elif opt in ("-r", "--recursive"):
             recursive = True
@@ -570,27 +579,13 @@ def main(argv):
         for path, eol, suggested_eol \
                 in eol_info_from_path_patterns(path_patterns, recursive,
                                                excludes):
-            log.info("%s: %s", path, name_from_eol_type(eol))
+            log.info("%s: %s", path, english_name_from_eol(eol))
     elif action == "convert":
-        TODO
-        eol_convert(path_patterns)
+        for path in _paths_from_path_patterns(path_patterns,
+                                              recursive=recursive,
+                                              excludes=excludes):
+            convert_path_eol(path, eol_type)
     return 0
-
-    TODO
-    if not patterns:
-        log.error("no files specified (see `eol --help' for usage)")
-        return 1
-    for pattern in patterns:
-        if sys.platform == "win32":
-            # Windows shell does not do globbing for you.
-            paths = glob.glob(pattern) or [pattern]
-        else:
-            paths = [pattern]
-        for path in paths:
-            if action == "list":
-                list_path_eol_type(path)
-            elif action == "convert":
-                convert_path_eol_type(path, eol_type)
 
 
 if __name__ == "__main__":
