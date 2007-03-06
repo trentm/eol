@@ -29,6 +29,9 @@
     `eol` is a tool for working with EOLs in text files: determining the
     EOL type and converting between types. `eol.py` can also be used as
     a Python module.
+    
+    By default with the command-line interface, binary files are skipped
+    where "binary files" is any with a null in the content (not perfect).
 
     Please report inadequacies to Trent Mick <trentm at google's mail thing>.
 """
@@ -38,9 +41,6 @@
 #   eol-english-name    English representation, e.g.: 'Windows (CRLF)'
 #
 #TODO:
-# - skip non-text files by default?
-#   Just use simple nul-detection for now. Given contentinfo can do
-#   better with weird encodings.
 # - any other conversions to take from eollib.py?
 # - convert to optparse
 # - module usage docstring and move command-line docstring
@@ -61,7 +61,7 @@
 
 
 __revision__ = "$Id$"
-__version_info__ = (0, 3, 0)
+__version_info__ = (0, 4, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -77,6 +77,8 @@ import stat
 
 log = logging.getLogger("eol")
 
+
+# The EOL types.
 CR = "\r"
 LF = "\n"
 CRLF = "\r\n"
@@ -90,6 +92,8 @@ class MIXED(object):
     """EOL for files with mixed EOLs"""
     pass
 
+
+# Internal mappings.
 _english_name_from_eol = {
     CRLF : "Windows (CRLF)",
     CR   : "Mac Classic (CR)",
@@ -239,7 +243,15 @@ def eol_info_from_path_patterns(path_patterns, recursive=False,
     for path in _paths_from_path_patterns(path_patterns,
                                           recursive=recursive,
                                           excludes=excludes):
-        eol, suggested_eol = eol_info_from_path(path)
+        fin = open(path, "rb")
+        try:
+            content = fin.read()
+        finally:
+            fin.close()
+        if '\0' in content:
+            log.debug("skipped `%s': binary file (null in content)" % path)
+            continue
+        eol, suggested_eol = eol_info_from_text(content)
         yield path, eol, suggested_eol
 
 
@@ -260,7 +272,7 @@ def convert_text_eol(text, eol):
     return re.sub('\r\n|\r|\n', eol, text)
 
 
-def convert_path_eol(path, eol, log=log):
+def convert_path_eol(path, eol, skip_binary_content=True, log=log):
     """convert_path_eol(PATH, EOL)
     
     Convert the given file (in-place) to the given EOL. If no
@@ -271,6 +283,9 @@ def convert_path_eol(path, eol, log=log):
         original = fin.read()
     finally:
         fin.close()
+    if skip_binary_content and '\0' in original:
+        log.debug("skipped `%s': binary file (null in content)" % path)
+        return
     converted = convert_text_eol(original, eol)
     if original != converted:
         log.info("converted `%s' to %s EOLs", path, name_from_eol(eol))
@@ -563,7 +578,7 @@ def main(argv):
         elif opt == "--test":
             action = "test"
         elif opt in ("-c", "--convert"):
-            eol_type = eol_from_name(optarg.upper())
+            eol = eol_from_name(optarg.upper())
             action = "convert"
         elif opt in ("-r", "--recursive"):
             recursive = True
@@ -584,7 +599,7 @@ def main(argv):
         for path in _paths_from_path_patterns(path_patterns,
                                               recursive=recursive,
                                               excludes=excludes):
-            convert_path_eol(path, eol_type)
+            convert_path_eol(path, eol)
     return 0
 
 
