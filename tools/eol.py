@@ -61,7 +61,7 @@
 
 
 __revision__ = "$Id$"
-__version_info__ = (0, 4, 1)
+__version_info__ = (0, 4, 2)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -240,6 +240,8 @@ def eol_info_from_path_patterns(path_patterns, recursive=False,
     Yields 3-tuples: (PATH, EOL, SUGGESTED-EOL)
     See eol_info_from_text() docstring for details.
     """
+    assert not isinstance(path_patterns, basestring), \
+        "'path_patterns' must be a sequence, not a string: %r" % path_patterns
     for path in _paths_from_path_patterns(path_patterns,
                                           recursive=recursive,
                                           excludes=excludes):
@@ -303,6 +305,8 @@ def convert_path_patterns_eol(path_patterns, eol, recursive=False,
     """Convert the given paths (in-place) to the given EOL.  If no
     changes are necessary the file is not touched.
     """
+    assert not isinstance(path_patterns, basestring), \
+        "'path_patterns' must be a sequence, not a string: %r" % path_patterns
     for path in _paths_from_path_patterns(path_patterns,
                                           recursive=recursive,
                                           excludes=excludes):
