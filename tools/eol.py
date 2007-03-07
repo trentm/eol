@@ -61,7 +61,7 @@
 
 
 __revision__ = "$Id$"
-__version_info__ = (0, 4, 0)
+__version_info__ = (0, 4, 1)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -296,6 +296,17 @@ def convert_path_eol(path, eol, skip_binary_content=True, log=log):
             fout.close()
     else:
         log.debug("skipped `%s': no change required", path)
+
+
+def convert_path_patterns_eol(path_patterns, eol, recursive=False,
+                              excludes=[]):
+    """Convert the given paths (in-place) to the given EOL.  If no
+    changes are necessary the file is not touched.
+    """
+    for path in _paths_from_path_patterns(path_patterns,
+                                          recursive=recursive,
+                                          excludes=excludes):
+        convert_path_eol(path, eol)
 
 
 def mixed_eol_lines_in_text(text, eol=None):
