@@ -551,7 +551,7 @@ class _PerLevelFormatter(logging.Formatter):
             return logging.Formatter.format(self, record)
 
 def _setup_logging():
-    hdlr = logging.StreamHandler()
+    hdlr = logging.StreamHandler(sys.stdout)
     defaultFmt = "%(name)s: %(lowerlevelname)s: %(message)s"
     fmtFromLevel = {logging.DEBUG: "%(name)s: %(message)s",
                     logging.INFO: "%(message)s"}
