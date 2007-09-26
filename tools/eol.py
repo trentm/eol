@@ -60,8 +60,7 @@
 #        trentm.com: directory
 
 
-__revision__ = "$Id$"
-__version_info__ = (0, 4, 2)
+__version_info__ = (0, 5, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -609,7 +608,12 @@ def main(argv):
         for path, eol, suggested_eol \
                 in eol_info_from_path_patterns(path_patterns, recursive,
                                                excludes):
-            log.info("%s: %s", path, english_name_from_eol(eol))
+            if eol is MIXED:
+                log.info("%s: %s, predominatly %s", path, 
+                         english_name_from_eol(eol),
+                         english_name_from_eol(suggested_eol))
+            else:
+                log.info("%s: %s", path, english_name_from_eol(eol))
     elif action == "convert":
         for path in _paths_from_path_patterns(path_patterns,
                                               recursive=recursive,
