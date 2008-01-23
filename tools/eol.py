@@ -60,7 +60,7 @@
 #        trentm.com: directory
 
 
-__version_info__ = (0, 5, 0)
+__version_info__ = (0, 5, 1)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -233,7 +233,7 @@ def eol_info_from_path(path):
     return eol_info_from_text(content) 
 
 def eol_info_from_path_patterns(path_patterns, recursive=False,
-                                excludes=[]):
+                                includes=[], excludes=[]):
     """Generate EOL info for the given paths.
     
     Yields 3-tuples: (PATH, EOL, SUGGESTED-EOL)
@@ -243,6 +243,7 @@ def eol_info_from_path_patterns(path_patterns, recursive=False,
         "'path_patterns' must be a sequence, not a string: %r" % path_patterns
     for path in _paths_from_path_patterns(path_patterns,
                                           recursive=recursive,
+                                          includes=includes,
                                           excludes=excludes):
         fin = open(path, "rb")
         try:
