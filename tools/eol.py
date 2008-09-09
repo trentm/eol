@@ -60,7 +60,7 @@
 #        trentm.com: directory
 
 
-__version_info__ = (0, 5, 1)
+__version_info__ = (0, 5, 2)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -608,7 +608,7 @@ def main(argv):
     elif action == "list":
         for path, eol, suggested_eol \
                 in eol_info_from_path_patterns(path_patterns, recursive,
-                                               excludes):
+                                               excludes=excludes):
             if eol is MIXED:
                 log.info("%s: %s, predominatly %s", path, 
                          english_name_from_eol(eol),
