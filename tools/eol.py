@@ -8,8 +8,9 @@
     eol - a tool for working with EOLs in text files
 
     Usage:
-        eol FILE...             # list EOL of file(s)
-        eol -c NAME FILE...     # convert file(s) to given EOL
+        eol FILE...             # list EOL-style of file(s)
+        eol -c NAME FILE...     # convert file(s) to given EOL-style
+        eol -f NAME FILE...     # find files with the given EOL-style
 
     Options:
         -h, --help          dump this help and exit
@@ -22,6 +23,9 @@
         -c|--convert NAME   convert file(s) to the given EOL; NAME must be
                             one of "LF", "CRLF", "CR" or "NATIVE"
                             (case-insensitive)
+        -f|--find NAME      find and list file(s) with the given EOL-style;
+                            NAME must be one of "LF", "CRLF", "CR", "NATIVE",
+                            "NONE" or "MIXED" (case-insensitive)
         -r, --recursive     recursive search directories
         -x|--skip PATTERN   patterns to exclude in determining files
                             
@@ -49,18 +53,8 @@
 # - Add 'convert_stream_eol_type(stream, eol_type, n=1024)'? Where 'n'
 #   is the read chunksize and this is generator: yields chunks.
 # - __all__
-#
-# Dev Notes:
-# - If we *do* want to output like `file` then (1) we need to gather all
-#   results for tabular alignment; and (2) we need to NOT use log.error
-#   for non-existant files:
-#        $ file foo* tools trentm.com
-#        foo*:       Can't stat `foo*' (No such file or directory)
-#        tools:      directory
-#        trentm.com: directory
 
-
-__version_info__ = (0, 5, 2)
+__version_info__ = (0, 6, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os
@@ -105,6 +99,8 @@ _eol_from_name = {
     "CR"    : CR,
     "LF"    : LF,
     "NATIVE": NATIVE,
+    "MIXED" : MIXED,
+    "NONE"  : None,
 }
 _name_from_eol = {
     CRLF: "CRLF",
@@ -150,6 +146,8 @@ def eol_from_name(name):
         >>> eol_from_name("CRLF") == CRLF
         True
         >>> eol_from_name("NATIVE") == NATIVE
+        True
+        >>> eol_from_name("MIXED") == MIXED
         True
     """
     try:
@@ -569,9 +567,9 @@ def main(argv):
 
     # Parse options.
     try:
-        opts, path_patterns = getopt.getopt(argv[1:], "Vvqhrc:x:",
+        opts, path_patterns = getopt.getopt(argv[1:], "Vvqhrc:x:f:",
             ["version", "verbose", "quiet", "help", "test",
-             "recursive", "convert=", "skip="])
+             "recursive", "convert=", "skip=", "find="])
     except getopt.GetoptError, ex:
         log.error(str(ex))
         log.error("Try `eol --help'.")
@@ -594,7 +592,13 @@ def main(argv):
             action = "test"
         elif opt in ("-c", "--convert"):
             eol = eol_from_name(optarg.upper())
+            if eol not in (CRLF, LF, CR):
+                raise ValueError("illegal EOL name for conversion: %r"
+                    % optarg.upper())
             action = "convert"
+        elif opt in ("-f", "--find"):
+            eol = eol_from_name(optarg.upper())
+            action = "find"
         elif opt in ("-r", "--recursive"):
             recursive = True
         elif opt in ("-x", "--skip"):
@@ -620,6 +624,12 @@ def main(argv):
                                               recursive=recursive,
                                               excludes=excludes):
             convert_path_eol(path, eol)
+    elif action == "find":
+        for path, path_eol, suggested_eol in eol_info_from_path_patterns(
+                path_patterns, recursive, excludes=excludes):
+            if path_eol == eol:
+                log.info("%s", path)
+    
     return 0
 
 
