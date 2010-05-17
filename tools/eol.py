@@ -35,7 +35,7 @@
     a Python module.
     
     By default with the command-line interface, binary files are skipped
-    where "binary files" is any with a null in the content (not perfect).
+    where "binary files" is any file with a null in the content (not perfect).
 
     Please report inadequacies to Trent Mick <trentm at google's mail thing>.
 """
