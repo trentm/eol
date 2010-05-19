@@ -25,6 +25,11 @@ class site(Task):
     def make(self):
         webbrowser.open("http://github.com/trentm/eol")
 
+class pypi(Task):
+    """open project page"""
+    def make(self):
+        webbrowser.open("http://pypi.python.org/pypi/eol/")
+
 
 class clean(Task):
     """Clean generated files and dirs."""
