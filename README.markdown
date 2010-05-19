@@ -3,6 +3,21 @@ with end-of-line chars in text files.
 
 This project lives here: <http://github.com/trentm/eol>
 
+## Installation
+
+To install in your Python's global site-packages use one of the
+following:
+
+    pip install eol
+    pypm install eol   # if you use ActivePython (http://www.activestate.com/activepython)
+
+But you use a
+[virtualenvs](http://www.arthurkoziel.com/2008/10/22/working-virtualenv/),
+right? If so, then use one of the following:
+
+    pip -E path/to/env install eol
+    pypm -E path/to/env install eol
+
 
 ## Command-line examples
 
