@@ -1,5 +1,9 @@
 # eol Changelog
 
+## eol 0.7.1 (not yet released)
+
+(nothing yet)
+
 ## eol 0.7.0
 
 - Fix `main` for setuptools/distribute entry points.
