@@ -2,6 +2,7 @@
 
 ## eol 0.7.0
 
+- Fix `main` for setuptools/distribute entry points.
 - Fix handling of dir symlinks for `eol -f ...`.
 - Pull out into separate project at <http://github.com/trentm/eol>.
 
