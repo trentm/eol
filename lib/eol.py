@@ -675,7 +675,10 @@ def _setup_logging():
 
 #---- mainline
 
-def main(argv):
+def main(argv=None):
+    if argv is None:
+        import sys
+        argv = sys.argv
     _setup_logging()
     log.setLevel(logging.INFO)
 
