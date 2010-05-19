@@ -18,7 +18,7 @@ setup(name='eol',
     version=eol.__version__,
     description="a command-line script and Python module for working with text file end-of-line (EOL) characters",
     long_description=README,
-    classifiers=filter(None, """
+    classifiers=[c.strip() for c in """
         Development Status :: 5 - Production/Stable
         Environment :: Console
         Intended Audience :: Developers
@@ -26,7 +26,7 @@ setup(name='eol',
         Operating System :: OS Independent
         Programming Language :: Python :: 2
         Topic :: Software Development :: Libraries :: Python Modules
-        """.split('\n')),
+        """.split('\n') if c.strip()],
     keywords='eol cli cr crlf lf',
     author='Trent Mick',
     author_email='trentm@gmail.com',
