@@ -18,7 +18,6 @@ setup(name='eol',
     version=eol.__version__,
     description="a command-line script and Python module for working with text file end-of-line (EOL) characters",
     long_description=README,
-    # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=filter(None, """
         Development Status :: 5 - Production/Stable
         Environment :: Console
@@ -39,8 +38,6 @@ setup(name='eol',
     package_dir = {'': 'lib'},
     include_package_data=True,
     zip_safe=False,
-    # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
-    install_requires=[],
     entry_points={
         'console_scripts':
             ['eol=eol:main']
