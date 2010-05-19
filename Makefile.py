@@ -44,15 +44,14 @@ class clean(Task):
 class sdist(Task):
     """python setup.py sdist"""
     def make(self):
-        sh.run_in_dir("%spython setup.py sdist -f --formats zip"
+        sh.run_in_dir("%spython setup.py sdist --formats zip"
                         % _setup_command_prefix(),
                       self.dir, self.log.debug)
 
 class pypi_upload(Task):
     """Upload release to pypi."""
     def make(self):
-        tasks = "sdist --formats zip upload"
-        sh.run_in_dir("%spython setup.py sdist -f --formats zip upload"
+        sh.run_in_dir("%spython setup.py sdist --formats zip upload"
                 % _setup_command_prefix(),
             self.dir, self.log.debug)
 

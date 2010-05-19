@@ -1,6 +1,6 @@
 # eol Changelog
 
-## eol 0.7.0 (not yet released)
+## eol 0.7.0
 
 - Fix handling of dir symlinks for `eol -f ...`.
 - Pull out into separate project at <http://github.com/trentm/eol>.
