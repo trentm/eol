@@ -731,7 +731,7 @@ def main(argv=None):
                 in eol_info_from_path_patterns(path_patterns, recursive,
                                                excludes=excludes):
             if eol is MIXED:
-                log.info("%s: %s, predominatly %s", path, 
+                log.info("%s: %s, predominantly %s", path, 
                          english_name_from_eol(eol),
                          english_name_from_eol(suggested_eol))
             else:

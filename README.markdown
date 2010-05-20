@@ -28,7 +28,7 @@ right? If so, then use one of the following:
     foo_crlf.txt: Windows (CRLF)
     foo_empty.txt: No EOLs
     foo_lf.txt: Unix (LF)
-    foo_mixed.txt: Mixed, predominatly Unix (LF)
+    foo_mixed.txt: Mixed, predominantly Unix (LF)
 
 Recursively:
     
