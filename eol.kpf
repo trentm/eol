@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Komodo Project File - DO NOT EDIT -->
+<project id="c4db773b-590a-5b43-9e07-2a6479747154" kpf_version="4" name="eol.kpf">
+<preference-set idref="c4db773b-590a-5b43-9e07-2a6479747154">
+  <string id="import_exclude_matches">.git;*.*~;*.bak;*.tmp;CVS;.#*;*.pyo;*.pyc;.svn;*%*;tmp*.html;.DS_Store</string>
+  <string id="import_include_matches"></string>
+  <boolean id="import_live">1</boolean>
+  <boolean id="import_recursive">1</boolean>
+  <string id="import_type">useFolders</string>
+</preference-set>
+</project>
