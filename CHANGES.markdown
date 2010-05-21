@@ -1,5 +1,9 @@
 # eol Changelog
 
+## eol 0.7.2 (not yet released)
+
+(nothing yet)
+
 ## eol 0.7.1
 
 - Add a 'mk cut_a_release' task to help with releases.
