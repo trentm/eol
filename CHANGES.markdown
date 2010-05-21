@@ -1,6 +1,6 @@
 # eol Changelog
 
-## eol 0.7.1 (not yet released)
+## eol 0.7.1
 
 - Add a 'mk cut_a_release' task to help with releases.
 - Fix issue #1: spelling of "predominantly". Thanks [userd on
