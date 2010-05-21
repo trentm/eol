@@ -2,6 +2,8 @@
 
 ## How to cut a release
 
+Either run `mk cut_a_release` or manually do the following:
+
 1. Edit "CHANGES.markdown": Remove "(not yet released)" from the header for this
    version and commit.
 

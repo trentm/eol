@@ -7,12 +7,14 @@ import os
 from os.path import join, dirname, normpath, abspath, exists, basename
 import re
 from glob import glob
+import codecs
 import webbrowser
 
+import mklib
+assert mklib.__version_info__ >= (0,7,2)  # for `mklib.mk`
 from mklib.common import MkError
-from mklib import Task
+from mklib import Task, mk
 from mklib import sh
-
 
 
 class bugs(Task):
@@ -29,6 +31,126 @@ class pypi(Task):
     """open project page"""
     def make(self):
         webbrowser.open("http://pypi.python.org/pypi/eol/")
+
+
+class cut_a_release(Task):
+    """automate the steps for cutting a release
+    
+    See 'docs/devguide.markdown' for details.
+    """
+    _changes_parser = re.compile(r'^## eol (?P<ver>[\d\.abc]+)'
+        r'(?P<nyr>\s+\(not yet released\))?'
+        r'(?P<body>.*?)(?=^##|\Z)', re.M | re.S)
+
+    def make(self):
+        DRY_RUN = True
+        version = self._get_version()
+        self.log.info("cutting a v%s release", version)
+        
+        # Confirm
+        if not DRY_RUN:
+            answer = query_yes_no("* * *\n"
+                "Are you sure you want cut a v%s release?\n"
+                "This will involved commits and a release to pypi." % version,
+                default="no")
+            if answer != "yes":
+                self.log.info("user abort")
+                return
+            print "* * *"
+
+        # Checks: Ensure there is a section in changes for this version.
+        changes_path = join(self.dir, "CHANGES.markdown")
+        changes_txt = codecs.open(changes_path, 'r', 'utf-8').read()
+        changes_sections = self._changes_parser.findall(changes_txt)
+        top_ver = changes_sections[0][0]
+        if top_ver != version:
+            raise MkError("top section in `CHANGES.markdown' is for "
+                "version %r, expected version %r: aborting"
+                % (top_ver, version))
+        top_nyr = changes_sections[0][1]
+        if not top_nyr:
+            raise MkError("top section in `CHANGES.markdown' doesn't have "
+                "the expected '(not yet released)' marker: has this been "
+                "released already?")
+        top_body = changes_sections[0][2]
+        if top_body.strip() == "(nothing yet)":
+            raise MkError("top section body is `(nothing yet)': it looks like "
+                "nothing has been added to this release")
+        
+        # Commits to prepare release.
+        self.log.info("prepare `CHANGES.markdown' for release")
+        if not DRY_RUN:
+            changes_txt = changes_txt.replace(" (not yet released)", "", 1)
+            f = codecs.open(changes_path, 'w', 'utf-8')
+            f.write(changes_txt)
+            f.close()
+            sh.run('git commit %s -m "prepare for v%s release"'
+                % (changes_path, version), self.log.debug)
+
+        # Tag version and push.
+        self.log.info("tag the release")
+        if not DRY_RUN:
+            sh.run('git tag -a "v%s" -m "version %s"' % (version, version),
+                self.log.debug)
+            sh.run('git push', self.log.debug)
+        
+        # Release to PyPI.
+        self.log.info("release to pypi")
+        if not DRY_RUN:
+            mk("pypi_upload")
+        
+        # Commits to prepare for future dev.
+        next_version = self._get_next_version(version)
+        self.log.info("prepare for future dev (version %s)", next_version)
+        changes_txt = changes_txt.replace("## eol %s\n" % version,
+            "## eol %s (not yet released)\n\n(nothing yet)\n\n## eol %s\n" % (
+                next_version, version))
+        f = codecs.open(changes_path, 'w', 'utf-8')
+        f.write(changes_txt)
+        f.close()
+        
+        eol_py_path = join(self.dir, "lib", "eol.py")
+        eol_py = codecs.open(eol_py_path, 'r', 'utf-8')
+        version_tuple = self._tuple_from_version(version)
+        next_version_tuple = self._tuple_from_version(next_version)
+        marker = "__version_info__ = %r" % version_tuple
+        if marker not in eol_py:
+            raise MkError("couldn't find `%s' version marker in `%s' "
+                "content: can't prep for subsequent dev" % (marker, eol_py_path))
+        eol_py = eol_py.replace(marker, "__version_info__ = %r" % next_version)
+        f = codecs.open(eol_py_path, 'w', 'utf-8')
+        f.write(eol_py)
+        f.close()
+        
+        if not DRY_RUN:
+            sh.run('git commit %s %s -m "prep for future dev"' % (
+                changes_path, eol_py_path))
+        
+    
+    def _tuple_from_version(self, version):
+        def _intify(s):
+            try:
+                return int(s)
+            except ValueError:
+                return s
+        return tuple(_intify(b) for b in version.split('.'))
+
+    def _get_next_version(self, version):
+        last_bit = version.rsplit('.', 1)[-1]
+        try:
+            last_bit = int(last_bit)
+        except ValueError: # e.g. "1a2"
+            last_bit = int(re.split('[abc]', last_bit, 1)[-1])
+        return version[:-len(str(last_bit))] + str(last_bit + 1)
+
+    def _get_version(self):
+        lib_dir = join(dirname(abspath(__file__)), "lib")
+        sys.path.insert(0, lib_dir)
+        try:
+            import eol
+            return eol.__version__
+        finally:
+            del sys.path[0]
 
 
 class clean(Task):
@@ -81,6 +203,41 @@ class todo(Task):
 
 
 #---- internal support stuff
+
+## {{{ http://code.activestate.com/recipes/577058/ (r2)
+def query_yes_no(question, default="yes"):
+    """Ask a yes/no question via raw_input() and return their answer.
+    
+    "question" is a string that is presented to the user.
+    "default" is the presumed answer if the user just hits <Enter>.
+        It must be "yes" (the default), "no" or None (meaning
+        an answer is required of the user).
+
+    The "answer" return value is one of "yes" or "no".
+    """
+    valid = {"yes":"yes",   "y":"yes",  "ye":"yes",
+             "no":"no",     "n":"no"}
+    if default == None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while 1:
+        sys.stdout.write(question + prompt)
+        choice = raw_input().lower()
+        if default is not None and choice == '':
+            return default
+        elif choice in valid.keys():
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "\
+                             "(or 'y' or 'n').\n")
+## end of http://code.activestate.com/recipes/577058/ }}}
+
 
 ## {{{ http://code.activestate.com/recipes/577230/ (r2)
 def _should_include_path(path, includes, excludes):
