@@ -724,8 +724,8 @@ def main(argv=None):
     if action == "test":
         log.debug("run eol.py self-test...")
         import doctest
-        doctest.testmod() # TODO: return non-zero on failure?
-        return 0
+        results = doctest.testmod()
+        return results.failed
     elif action == "list":
         for path, eol, suggested_eol \
                 in eol_info_from_path_patterns(path_patterns, recursive,
