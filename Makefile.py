@@ -45,7 +45,6 @@ class cut_a_release(Task):
     def make(self):
         DRY_RUN = False
         version = self._get_version()
-        self.log.info("cutting a v%s release", version)
         
         # Confirm
         if not DRY_RUN:
@@ -57,6 +56,7 @@ class cut_a_release(Task):
                 self.log.info("user abort")
                 return
             print "* * *"
+        self.log.info("cutting a v%s release", version)
 
         # Checks: Ensure there is a section in changes for this version.
         changes_path = join(self.dir, "CHANGES.markdown")
@@ -99,7 +99,7 @@ class cut_a_release(Task):
         if not DRY_RUN:
             mk("pypi_upload")
         
-        # Commits to prepare for future dev.
+        # Commits to prepare for future dev and push.
         next_version = self._get_next_version(version)
         self.log.info("prepare for future dev (version %s)", next_version)
         marker = "## eol %s\n" % version
@@ -131,6 +131,7 @@ class cut_a_release(Task):
         if not DRY_RUN:
             sh.run('git commit %s %s -m "prep for future dev"' % (
                 changes_path, eol_py_path))
+            sh.run('git push')
         
     
     def _tuple_from_version(self, version):
