@@ -79,8 +79,8 @@ class cut_a_release(Task):
         
         # Commits to prepare release.
         self.log.info("prepare `CHANGES.markdown' for release")
+        changes_txt = changes_txt.replace(" (not yet released)", "", 1)
         if not DRY_RUN:
-            changes_txt = changes_txt.replace(" (not yet released)", "", 1)
             f = codecs.open(changes_path, 'w', 'utf-8')
             f.write(changes_txt)
             f.close()
@@ -102,6 +102,10 @@ class cut_a_release(Task):
         # Commits to prepare for future dev.
         next_version = self._get_next_version(version)
         self.log.info("prepare for future dev (version %s)", next_version)
+        marker = "## eol %s\n" % version
+        if marker not in changes_txt:
+            raise MkError("couldn't find `%s' marker in `%s' "
+                "content: can't prep for subsequent dev" % (marker, changes_path))
         changes_txt = changes_txt.replace("## eol %s\n" % version,
             "## eol %s (not yet released)\n\n(nothing yet)\n\n## eol %s\n" % (
                 next_version, version))
@@ -110,14 +114,14 @@ class cut_a_release(Task):
         f.close()
         
         eol_py_path = join(self.dir, "lib", "eol.py")
-        eol_py = codecs.open(eol_py_path, 'r', 'utf-8')
+        eol_py = codecs.open(eol_py_path, 'r', 'utf-8').read()
         version_tuple = self._tuple_from_version(version)
         next_version_tuple = self._tuple_from_version(next_version)
-        marker = "__version_info__ = %r" % version_tuple
+        marker = "__version_info__ = %r" % (version_tuple,)
         if marker not in eol_py:
             raise MkError("couldn't find `%s' version marker in `%s' "
                 "content: can't prep for subsequent dev" % (marker, eol_py_path))
-        eol_py = eol_py.replace(marker, "__version_info__ = %r" % next_version)
+        eol_py = eol_py.replace(marker, "__version_info__ = %r" % (next_version_tuple,))
         f = codecs.open(eol_py_path, 'w', 'utf-8')
         f.write(eol_py)
         f.close()
