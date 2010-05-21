@@ -43,7 +43,7 @@ class cut_a_release(Task):
         r'(?P<body>.*?)(?=^##|\Z)', re.M | re.S)
 
     def make(self):
-        DRY_RUN = True
+        DRY_RUN = False
         version = self._get_version()
         self.log.info("cutting a v%s release", version)
         
@@ -109,9 +109,10 @@ class cut_a_release(Task):
         changes_txt = changes_txt.replace("## eol %s\n" % version,
             "## eol %s (not yet released)\n\n(nothing yet)\n\n## eol %s\n" % (
                 next_version, version))
-        f = codecs.open(changes_path, 'w', 'utf-8')
-        f.write(changes_txt)
-        f.close()
+        if not DRY_RUN:
+            f = codecs.open(changes_path, 'w', 'utf-8')
+            f.write(changes_txt)
+            f.close()
         
         eol_py_path = join(self.dir, "lib", "eol.py")
         eol_py = codecs.open(eol_py_path, 'r', 'utf-8').read()
@@ -122,9 +123,10 @@ class cut_a_release(Task):
             raise MkError("couldn't find `%s' version marker in `%s' "
                 "content: can't prep for subsequent dev" % (marker, eol_py_path))
         eol_py = eol_py.replace(marker, "__version_info__ = %r" % (next_version_tuple,))
-        f = codecs.open(eol_py_path, 'w', 'utf-8')
-        f.write(eol_py)
-        f.close()
+        if not DRY_RUN:
+            f = codecs.open(eol_py_path, 'w', 'utf-8')
+            f.write(eol_py)
+            f.close()
         
         if not DRY_RUN:
             sh.run('git commit %s %s -m "prep for future dev"' % (

@@ -2,6 +2,7 @@
 
 ## eol 0.7.1 (not yet released)
 
+- Add a 'mk cut_a_release' task to help with releases.
 - Fix issue #1: spelling of "predominantly". Thanks [userd on
   reddit](http://www.reddit.com/r/Python/comments/c61nu/eolpy_a_tool_for_working_with_text_file_endofline/)!
 
