@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2005-2007 ActiveState Software Inc.
-#
-# Authors:
-#   Trent Mick (trentm at google's mail thing)
+# Copyright (c) 2005-2010 ActiveState Software Inc.
 
 """
     eol - a tool for working with EOLs in text files
@@ -37,7 +34,7 @@
     By default with the command-line interface, binary files are skipped
     where "binary files" is any file with a null in the content (not perfect).
 
-    Please report inadequacies to Trent Mick <trentm at google's mail thing>.
+    Please report inadequacies to <http://github.com/trentm/issues>.
 """
 # Nomenclature: (TODO)
 #   eol                 the actual EOL string: '\n', '\r\n' or '\r'
