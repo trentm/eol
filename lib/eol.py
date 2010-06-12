@@ -25,7 +25,7 @@
                             "NONE" or "MIXED" (case-insensitive)
         -r, --recursive     recursive search directories
         -x|--skip PATTERN   patterns to exclude in determining files
-                            
+
 
     `eol` is a tool for working with EOLs in text files: determining the
     EOL type and converting between types. `eol.py` can also be used as
@@ -672,10 +672,7 @@ def _setup_logging():
 
 #---- mainline
 
-def main(argv=None):
-    if argv is None:
-        import sys
-        argv = sys.argv
+def main(argv=sys.argv):
     _setup_logging()
     log.setLevel(logging.INFO)
 
@@ -746,24 +743,34 @@ def main(argv=None):
     
     return 0
 
-
+## {{{ http://code.activestate.com/recipes/577258/ (r2)
 if __name__ == "__main__":
     try:
         retval = main(sys.argv)
     except KeyboardInterrupt:
         sys.exit(1)
+    except SystemExit:
+        raise
     except:
+        import traceback
+        skip_it = False
         exc_info = sys.exc_info()
         if hasattr(exc_info[0], "__name__"):
-            log.error("%s: %s", exc_info[0].__name__, exc_info[1])
+            exc_class, exc, tb = exc_info
+            if isinstance(exc, IOError) and exc.args[0] == 32:
+                # Skip 'IOError: [Errno 32] Broken pipe': often a cancelling of `less`.
+                skip_it = True
+            if not skip_it:
+                tb_path, tb_lineno, tb_func = traceback.extract_tb(tb)[-1][:3]
+                log.error("%s (%s:%s in %s)", exc_info[1], tb_path,
+                          tb_lineno, tb_func)
         else:  # string exception
             log.error(exc_info[0])
-        if log.isEnabledFor(logging.DEBUG):
-            import traceback
-            print
-            traceback.print_exception(*exc_info)
-        sys.exit(1)
+        if not skip_it:
+            if log.isEnabledFor(logging.DEBUG):
+                print
+                traceback.print_exception(*exc_info)
+            sys.exit(1)
     else:
         sys.exit(retval)
-
-
+## end of http://code.activestate.com/recipes/577258/ }}}
