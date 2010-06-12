@@ -90,9 +90,9 @@ class cut_a_release(Task):
         # Tag version and push.
         self.log.info("tag the release")
         if not DRY_RUN:
-            sh.run('git tag -a "v%s" -m "version %s"' % (version, version),
+            sh.run('git tag -a "%s" -m "version %s"' % (version, version),
                 self.log.debug)
-            sh.run('git push', self.log.debug)
+            sh.run('git --tags push', self.log.debug)
         
         # Release to PyPI.
         self.log.info("release to pypi")
