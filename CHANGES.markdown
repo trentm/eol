@@ -1,5 +1,9 @@
 # eol Changelog
 
+## eol 0.7.3 (not yet released)
+
+(nothing yet)
+
 ## eol 0.7.2
 
 - Fix error with `eol -h` (jeesh).
