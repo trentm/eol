@@ -2,7 +2,7 @@
 
 ## eol 0.7.2 (not yet released)
 
-(nothing yet)
+- Fix error with `eol -h` (jeesh).
 
 ## eol 0.7.1
 
