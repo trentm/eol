@@ -743,7 +743,7 @@ def main(argv=sys.argv):
     
     return 0
 
-## {{{ http://code.activestate.com/recipes/577258/ (r2)
+## {{{ http://code.activestate.com/recipes/577258/ (r4)
 if __name__ == "__main__":
     try:
         retval = main(sys.argv)
@@ -752,7 +752,9 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except:
-        import traceback
+        import traceback, logging
+        if not log.handlers and not logging.root.handlers:
+            logging.basicConfig()
         skip_it = False
         exc_info = sys.exc_info()
         if hasattr(exc_info[0], "__name__"):
@@ -763,7 +765,7 @@ if __name__ == "__main__":
             if not skip_it:
                 tb_path, tb_lineno, tb_func = traceback.extract_tb(tb)[-1][:3]
                 log.error("%s (%s:%s in %s)", exc_info[1], tb_path,
-                          tb_lineno, tb_func)
+                    tb_lineno, tb_func)
         else:  # string exception
             log.error(exc_info[0])
         if not skip_it:
