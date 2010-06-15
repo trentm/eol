@@ -12,7 +12,7 @@ try:
     import eol
 finally:
     del sys.path[0]
-README = open(os.path.join(_top_dir, 'README.markdown')).read()
+README = open(os.path.join(_top_dir, 'README.md')).read()
 
 setup(name='eol',
     version=eol.__version__,
