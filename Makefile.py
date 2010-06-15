@@ -32,15 +32,17 @@ class pypi(Task):
     def make(self):
         webbrowser.open("http://pypi.python.org/pypi/eol/")
 
-
 class cut_a_release(Task):
     """automate the steps for cutting a release
     
-    See 'docs/devguide.markdown' for details.
+    See 'docs/devguide.md' for details.
     """
-    _changes_parser = re.compile(r'^## eol (?P<ver>[\d\.abc]+)'
+    proj_name = "eol"
+    version_py_path = "lib/eol.py"
+    version_module = "eol"
+    _changes_parser = re.compile(r'^## %s (?P<ver>[\d\.abc]+)'
         r'(?P<nyr>\s+\(not yet released\))?'
-        r'(?P<body>.*?)(?=^##|\Z)', re.M | re.S)
+        r'(?P<body>.*?)(?=^##|\Z)' % proj_name, re.M | re.S)
 
     def make(self):
         DRY_RUN = False
@@ -49,90 +51,96 @@ class cut_a_release(Task):
         # Confirm
         if not DRY_RUN:
             answer = query_yes_no("* * *\n"
-                "Are you sure you want cut a v%s release?\n"
+                "Are you sure you want cut a %s release?\n"
                 "This will involved commits and a release to pypi." % version,
                 default="no")
             if answer != "yes":
                 self.log.info("user abort")
                 return
             print "* * *"
-        self.log.info("cutting a v%s release", version)
+        self.log.info("cutting a %s release", version)
 
         # Checks: Ensure there is a section in changes for this version.
-        changes_path = join(self.dir, "CHANGES.markdown")
-        changes_txt = codecs.open(changes_path, 'r', 'utf-8').read()
+        changes_path = join(self.dir, "CHANGES.md")
+        changes_txt = changes_txt_before = codecs.open(changes_path, 'r', 'utf-8').read()
         changes_sections = self._changes_parser.findall(changes_txt)
         top_ver = changes_sections[0][0]
         if top_ver != version:
-            raise MkError("top section in `CHANGES.markdown' is for "
+            raise MkError("top section in `CHANGES.md' is for "
                 "version %r, expected version %r: aborting"
                 % (top_ver, version))
         top_nyr = changes_sections[0][1]
         if not top_nyr:
-            raise MkError("top section in `CHANGES.markdown' doesn't have "
-                "the expected '(not yet released)' marker: has this been "
-                "released already?")
+            answer = query_yes_no("\n* * *\n"
+                "The top section in `CHANGES.md' doesn't have the expected\n"
+                "'(not yet released)' marker. Has this been released already?",
+                default="yes")
+            if answer != "no":
+                self.log.info("abort")
+                return
+            print "* * *"
         top_body = changes_sections[0][2]
         if top_body.strip() == "(nothing yet)":
             raise MkError("top section body is `(nothing yet)': it looks like "
                 "nothing has been added to this release")
         
         # Commits to prepare release.
-        self.log.info("prepare `CHANGES.markdown' for release")
         changes_txt = changes_txt.replace(" (not yet released)", "", 1)
-        if not DRY_RUN:
+        if not DRY_RUN and changes_txt != changes_txt_before:
+            self.log.info("prepare `CHANGES.md' for release")
             f = codecs.open(changes_path, 'w', 'utf-8')
             f.write(changes_txt)
             f.close()
-            sh.run('git commit %s -m "prepare for v%s release"'
+            sh.run('git commit %s -m "prepare for %s release"'
                 % (changes_path, version), self.log.debug)
 
         # Tag version and push.
-        self.log.info("tag the release")
-        if not DRY_RUN:
+        curr_tags = set(t for t in _capture_stdout(["git", "tag", "-l"]).split('\n') if t)
+        if not DRY_RUN and version not in curr_tags:
+            self.log.info("tag the release")
             sh.run('git tag -a "%s" -m "version %s"' % (version, version),
                 self.log.debug)
-            sh.run('git --tags push', self.log.debug)
-        
+            sh.run('git push --tags', self.log.debug)
+
         # Release to PyPI.
         self.log.info("release to pypi")
         if not DRY_RUN:
             mk("pypi_upload")
-        
+
         # Commits to prepare for future dev and push.
         next_version = self._get_next_version(version)
         self.log.info("prepare for future dev (version %s)", next_version)
-        marker = "## eol %s\n" % version
+        marker = "## %s %s\n" % (self.proj_name, version)
         if marker not in changes_txt:
             raise MkError("couldn't find `%s' marker in `%s' "
                 "content: can't prep for subsequent dev" % (marker, changes_path))
-        changes_txt = changes_txt.replace("## eol %s\n" % version,
-            "## eol %s (not yet released)\n\n(nothing yet)\n\n## eol %s\n" % (
-                next_version, version))
+        changes_txt = changes_txt.replace("## %s %s\n" % (self.proj_name, version),
+            "## %s %s (not yet released)\n\n(nothing yet)\n\n## %s %s\n" % (
+                self.proj_name, next_version, self.proj_name, version))
         if not DRY_RUN:
             f = codecs.open(changes_path, 'w', 'utf-8')
             f.write(changes_txt)
             f.close()
-        
-        eol_py_path = join(self.dir, "lib", "eol.py")
-        eol_py = codecs.open(eol_py_path, 'r', 'utf-8').read()
+
+        ver_path = join(self.dir, normpath(self.version_py_path))
+        ver_content = codecs.open(ver_path, 'r', 'utf-8').read()
         version_tuple = self._tuple_from_version(version)
         next_version_tuple = self._tuple_from_version(next_version)
         marker = "__version_info__ = %r" % (version_tuple,)
-        if marker not in eol_py:
+        if marker not in ver_content:
             raise MkError("couldn't find `%s' version marker in `%s' "
-                "content: can't prep for subsequent dev" % (marker, eol_py_path))
-        eol_py = eol_py.replace(marker, "__version_info__ = %r" % (next_version_tuple,))
+                "content: can't prep for subsequent dev" % (marker, ver_path))
+        ver_content = ver_content.replace(marker,
+            "__version_info__ = %r" % (next_version_tuple,))
         if not DRY_RUN:
-            f = codecs.open(eol_py_path, 'w', 'utf-8')
-            f.write(eol_py)
+            f = codecs.open(ver_path, 'w', 'utf-8')
+            f.write(ver_content)
             f.close()
         
         if not DRY_RUN:
             sh.run('git commit %s %s -m "prep for future dev"' % (
-                changes_path, eol_py_path))
+                changes_path, ver_path))
             sh.run('git push')
-        
     
     def _tuple_from_version(self, version):
         def _intify(s):
@@ -154,11 +162,11 @@ class cut_a_release(Task):
         lib_dir = join(dirname(abspath(__file__)), "lib")
         sys.path.insert(0, lib_dir)
         try:
-            import eol
-            return eol.__version__
+            mod = __import__(self.version_module)
+            return mod.__version__
         finally:
             del sys.path[0]
-
+k
 
 class clean(Task):
     """Clean generated files and dirs."""
@@ -532,4 +540,7 @@ def _setup_command_prefix():
         prefix = "COPY_EXTENDED_ATTRIBUTES_DISABLE=1 "
     return prefix
 
-
+def _capture_stdout(argv):
+    import subprocess
+    p = subprocess.Popen(argv, stdout=subprocess.PIPE)
+    return p.communicate()[0]
