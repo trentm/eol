@@ -1,6 +1,6 @@
 # eol Changelog
 
-## eol 0.7.3 (not yet released)
+## eol 0.7.3
 
 - Switch to `optparse` for option processing. Benefit is that you can have
   options after the "FILE" argument(s).
