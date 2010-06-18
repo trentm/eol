@@ -12,7 +12,7 @@ following:
     pypm install eol   # if you use ActivePython (http://www.activestate.com/activepython)
 
 But you use a
-[virtualenvs](http://www.arthurkoziel.com/2008/10/22/working-virtualenv/),
+[virtualenv](http://www.arthurkoziel.com/2008/10/22/working-virtualenv/),
 right? If so, then use one of the following:
 
     pip -E path/to/env install eol

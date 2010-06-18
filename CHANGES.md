@@ -2,7 +2,8 @@
 
 ## eol 0.7.3 (not yet released)
 
-(nothing yet)
+- Switch to `optparse` for option processing. Benefit is that you can have
+  options after the "FILE" argument(s).
 
 ## eol 0.7.2
 

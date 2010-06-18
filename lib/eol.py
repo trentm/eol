@@ -1,40 +1,22 @@
 #!/usr/bin/env python
 # Copyright (c) 2005-2010 ActiveState Software Inc.
-
-"""
-    eol - a tool for working with EOLs in text files
-
-    Usage:
-        eol FILE...             # list EOL-style of file(s)
-        eol -c NAME FILE...     # convert file(s) to given EOL-style
-        eol -f NAME FILE...     # find files with the given EOL-style
-
-    Options:
-        -h, --help          dump this help and exit
-        -V, --version       dump this script's version and exit
-        -v, --verbose       verbose output
-        -q, --quiet         quiet output (only warnings and errors)
-        --test              run self-test and exit (use 'eol.py -v --test' for
-                            verbose test output)
-
-        -c|--convert NAME   convert file(s) to the given EOL; NAME must be
-                            one of "LF", "CRLF", "CR" or "NATIVE"
-                            (case-insensitive)
-        -f|--find NAME      find and list file(s) with the given EOL-style;
-                            NAME must be one of "LF", "CRLF", "CR", "NATIVE",
-                            "NONE" or "MIXED" (case-insensitive)
-        -r, --recursive     recursive search directories
-        -x|--skip PATTERN   patterns to exclude in determining files
-
-
-    `eol` is a tool for working with EOLs in text files: determining the
-    EOL type and converting between types. `eol.py` can also be used as
-    a Python module.
     
-    By default with the command-line interface, binary files are skipped
-    where "binary files" is any file with a null in the content (not perfect).
+"""eol -- a tool for working with EOLs in text files
 
-    Please report inadequacies to <http://github.com/trentm/issues>.
+Usage:
+  eol FILE...             # list EOL-style of file(s)
+  eol -c NAME FILE...     # convert file(s) to given EOL-style
+  eol -f NAME FILE...     # find files with the given EOL-style
+
+
+`eol` is a tool for working with EOLs in text files: determining the
+EOL type and converting between types. `eol.py` can also be used as
+a Python module.
+  
+By default with the command-line interface, binary files are skipped
+where "binary files" is any file with a null in the content (not perfect).
+
+Please report inadequacies to <http://github.com/trentm/eol/issues>.
 """
 # Nomenclature: (TODO)
 #   eol                 the actual EOL string: '\n', '\r\n' or '\r'
@@ -43,7 +25,6 @@
 #
 #TODO:
 # - any other conversions to take from eollib.py?
-# - convert to optparse
 # - module usage docstring and move command-line docstring
 # - Add 'hint' for the suggested eol in eol_info_from_text()? Useful for
 #   Komodo if there is a pref.
@@ -56,7 +37,7 @@ __version__ = '.'.join(map(str, __version_info__))
 
 import os
 import sys
-import getopt
+import optparse
 import logging
 import glob
 import stat
@@ -365,7 +346,7 @@ def mixed_eol_lines_in_text(text, eol=None):
 
 #---- internal support stuff
 
-## {{{ http://code.activestate.com/recipes/577230/ (r2)
+## {{{ http://code.activestate.com/recipes/577230/ (r3)
 def _should_include_path(path, includes, excludes):
     """Return True iff the given path should be included."""
     from os.path import basename
@@ -460,7 +441,7 @@ def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
 
 _NOT_SPECIFIED = ("NOT", "SPECIFIED")
 def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
-                              recursive=True, includes=[], excludes=[],
+                              recursive=True, includes=None, excludes=None,
                               skip_dupe_dirs=False,
                               follow_symlinks=False,
                               on_error=_NOT_SPECIFIED):
@@ -549,6 +530,8 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
 
     assert not isinstance(path_patterns, basestring), \
         "'path_patterns' must be a sequence, not a string: %r" % path_patterns
+    if includes is None: includes = []
+    if excludes is None: excludes = []
     GLOB_CHARS = '*?['
 
     if skip_dupe_dirs:
@@ -668,6 +651,11 @@ def _setup_logging():
     hdlr.setFormatter(fmtr)
     logging.root.addHandler(hdlr)
 
+class _NoReflowFormatter(optparse.IndentedHelpFormatter):
+    """An optparse formatter that does NOT reflow the description."""
+    def format_description(self, description):
+        return description or ""
+
 
 
 #---- mainline
@@ -677,44 +665,52 @@ def main(argv=sys.argv):
     log.setLevel(logging.INFO)
 
     # Parse options.
-    try:
-        opts, path_patterns = getopt.getopt(argv[1:], "Vvqhrc:x:f:",
-            ["version", "verbose", "quiet", "help", "test",
-             "recursive", "convert=", "skip=", "find="])
-    except getopt.GetoptError, ex:
-        log.error(str(ex))
-        log.error("Try `eol --help'.")
+    parser = optparse.OptionParser(prog="eol", usage='',
+        version="%prog " + __version__, description=__doc__,
+        formatter=_NoReflowFormatter())
+    parser.add_option("-v", "--verbose", dest="log_level",
+        action="store_const", const=logging.DEBUG,
+        help="more verbose output")
+    parser.add_option("-q", "--quiet", dest="log_level",
+        action="store_const", const=logging.WARNING,
+        help="quieter output (just warnings and errors)")
+    parser.set_default("log_level", logging.INFO)
+    parser.add_option("--test", action="store_true",
+        help="run self-test and exit (use 'eol.py -v --test' for verbose test output)")
+    parser.add_option("-c", "--convert", metavar="NAME",
+        help='convert file(s) to the given EOL; NAME must be one of "LF", '
+            '"CRLF", "CR" or "NATIVE" (case-insensitive)')
+    parser.add_option("-f", "--find", metavar="NAME",
+        help='find and list file(s) with the given EOL-style; '
+            'NAME must be one of "LF", "CRLF", "CR", "NATIVE", '
+            '"NONE" or "MIXED" (case-insensitive)')
+    parser.add_option("-r", "--recursive", action="store_true",
+        help='recursively search directories', default=False)
+    parser.add_option("-x", "--skip", action="append", metavar="PATTERN",
+        help="patterns to excluding in determining files")
+    opts, path_patterns = parser.parse_args()
+    log.setLevel(opts.log_level)
+    actions = []
+    if opts.test: actions.append("test")
+    if opts.convert: actions.append("convert")
+    if opts.find: actions.append("find")
+    if not actions:
+        actions = ["list"]
+    elif len(actions) > 1:
+        log.error("cannot specify more than one of --convert, --test "
+            "and --find at once")
         return 1
-    recursive = False
-    action = "list"
-    excludes = []
-    for opt, optarg in opts:
-        if opt in ("-h", "--help"):
-            sys.stdout.write(__doc__)
-            return
-        elif opt in ("-V", "--version"):
-            print "eol %s" % __version__
-            return
-        elif opt in ("-v", "--verbose"):
-            log.setLevel(logging.DEBUG)
-        elif opt in ("-q", "--quiet"):
-            log.setLevel(logging.WARNING)
-        elif opt == "--test":
-            action = "test"
-        elif opt in ("-c", "--convert"):
-            eol = eol_from_name(optarg.upper())
-            if eol not in (CRLF, LF, CR):
-                raise ValueError("illegal EOL name for conversion: %r"
-                    % optarg.upper())
-            action = "convert"
-        elif opt in ("-f", "--find"):
-            eol = eol_from_name(optarg.upper())
-            action = "find"
-        elif opt in ("-r", "--recursive"):
-            recursive = True
-        elif opt in ("-x", "--skip"):
-            excludes.append(optarg)
+    action = actions[-1]
+    log.debug("action: %r" % action)
+    if action == "convert":
+        eol = eol_from_name(opts.convert.upper())
+        if eol not in (CRLF, LF, CR):
+            raise ValueError("illegal EOL name for conversion: %r"
+                % opts.convert.upper())
+    elif action == "find":
+        eol = eol_from_name(opts.find.upper())
 
+    # Perform action.
     if action == "test":
         log.debug("run eol.py self-test...")
         import doctest
@@ -722,22 +718,21 @@ def main(argv=sys.argv):
         return results.failed
     elif action == "list":
         for path, eol, suggested_eol \
-                in eol_info_from_path_patterns(path_patterns, recursive,
-                                               excludes=excludes):
+                in eol_info_from_path_patterns(path_patterns, opts.recursive,
+                    excludes=opts.skip):
             if eol is MIXED:
                 log.info("%s: %s, predominantly %s", path, 
-                         english_name_from_eol(eol),
-                         english_name_from_eol(suggested_eol))
+                    english_name_from_eol(eol),
+                    english_name_from_eol(suggested_eol))
             else:
                 log.info("%s: %s", path, english_name_from_eol(eol))
     elif action == "convert":
         for path in _paths_from_path_patterns(path_patterns,
-                                              recursive=recursive,
-                                              excludes=excludes):
+                recursive=opts.recursive, excludes=opts.skip):
             convert_path_eol(path, eol)
     elif action == "find":
         for path, path_eol, suggested_eol in eol_info_from_path_patterns(
-                path_patterns, recursive, excludes=excludes):
+                path_patterns, opts.recursive, excludes=opts.skip):
             if path_eol == eol:
                 log.info("%s", path)
     
