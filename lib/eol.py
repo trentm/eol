@@ -32,7 +32,7 @@ Please report inadequacies to <http://github.com/trentm/eol/issues>.
 #   is the read chunksize and this is generator: yields chunks.
 # - __all__
 
-__version_info__ = (0, 7, 3)
+__version_info__ = (0, 7, 4)
 __version__ = '.'.join(map(str, __version_info__))
 
 import os

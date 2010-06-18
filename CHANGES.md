@@ -1,5 +1,9 @@
 # eol Changelog
 
+## eol 0.7.4 (not yet released)
+
+(nothing yet)
+
 ## eol 0.7.3
 
 - Switch to `optparse` for option processing. Benefit is that you can have
