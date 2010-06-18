@@ -205,11 +205,20 @@ class pypi_upload(Task):
 
 class todo(Task):
     """Print out todo's and xxx's in the docs area."""
+    @property
+    def excludes(self):
+        yield ".git"
+        for line in open(join(self.dir, ".gitignore")):
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("#"):
+                continue
+            line = line.strip('/')
+            yield line
     def make(self):
-        for path in _paths_from_path_patterns(['.'],
-                excludes=[".svn", "*.pyc", "TO""DO.txt", "Makefile.py",
-                          "*.png", "*.gif", "*.pprint", "*.prof",
-                          "tmp*"]):
+        excludes = list(self.excludes)
+        for path in _paths_from_path_patterns(['.'], excludes=excludes):
             self._dump_pattern_in_path("TO\DO\\|XX\X", path)
 
     def _dump_pattern_in_path(self, pattern, path):
