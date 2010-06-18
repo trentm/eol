@@ -166,7 +166,7 @@ class cut_a_release(Task):
             return mod.__version__
         finally:
             del sys.path[0]
-k
+
 
 class clean(Task):
     """Clean generated files and dirs."""
