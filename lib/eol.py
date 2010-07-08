@@ -24,7 +24,6 @@ Please report inadequacies to <http://github.com/trentm/eol/issues>.
 #   eol-english-name    English representation, e.g.: 'Windows (CRLF)'
 #
 #TODO:
-# - any other conversions to take from eollib.py?
 # - module usage docstring and move command-line docstring
 # - Add 'hint' for the suggested eol in eol_info_from_text()? Useful for
 #   Komodo if there is a pref.
