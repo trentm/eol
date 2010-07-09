@@ -263,7 +263,7 @@ def query_yes_no(question, default="yes"):
 ## end of http://code.activestate.com/recipes/577058/ }}}
 
 
-## {{{ http://code.activestate.com/recipes/577230/ (r2)
+## {{{ http://code.activestate.com/recipes/577230/ (r4)
 def _should_include_path(path, includes, excludes):
     """Return True iff the given path should be included."""
     from os.path import basename
@@ -306,8 +306,6 @@ def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
        A symlinked dir is only recursed into if it is to a deeper dir
        within the same tree. This is my understanding of how `find -L
        DIR` works.
-
-    TODO: put as a separate recipe
     """
     import os
     from os.path import join, isdir, islink, abspath
@@ -358,7 +356,7 @@ def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
 
 _NOT_SPECIFIED = ("NOT", "SPECIFIED")
 def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
-                              recursive=True, includes=[], excludes=[],
+                              recursive=True, includes=None, excludes=None,
                               skip_dupe_dirs=False,
                               follow_symlinks=False,
                               on_error=_NOT_SPECIFIED):
@@ -438,8 +436,6 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
         script -r PATH* # yield files and dirs matching PATH* and recursively
                         # under dirs; if none, call on_error(PATH*)
                         # callback
-
-    TODO: perf improvements (profile, stat just once)
     """
     from os.path import basename, exists, isdir, join, normpath, abspath, \
                         lexists, islink, realpath
@@ -447,6 +443,8 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
 
     assert not isinstance(path_patterns, basestring), \
         "'path_patterns' must be a sequence, not a string: %r" % path_patterns
+    if includes is None: includes = []
+    if excludes is None: excludes = []
     GLOB_CHARS = '*?['
 
     if skip_dupe_dirs:
