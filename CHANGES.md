@@ -1,5 +1,9 @@
 # eol Changelog
 
+## eol 0.7.5 (not yet released)
+
+(nothing yet)
+
 ## eol 0.7.4
 
 - Python 3 support (not heavily tested yet)
