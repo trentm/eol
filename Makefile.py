@@ -4,7 +4,7 @@
 
 import sys
 import os
-from os.path import join, dirname, normpath, abspath, exists, basename
+from os.path import join, dirname, normpath, abspath, exists, basename, expanduser
 import re
 from glob import glob
 import codecs
@@ -34,7 +34,7 @@ class pypi(Task):
 
 class cut_a_release(Task):
     """automate the steps for cutting a release
-    
+
     See 'docs/devguide.md' for details.
     """
     proj_name = "eol"
@@ -47,7 +47,7 @@ class cut_a_release(Task):
     def make(self):
         DRY_RUN = False
         version = self._get_version()
-        
+
         # Confirm
         if not DRY_RUN:
             answer = query_yes_no("* * *\n"
@@ -83,7 +83,7 @@ class cut_a_release(Task):
         if top_body.strip() == "(nothing yet)":
             raise MkError("top section body is `(nothing yet)': it looks like "
                 "nothing has been added to this release")
-        
+
         # Commits to prepare release.
         changes_txt = changes_txt.replace(" (not yet released)", "", 1)
         if not DRY_RUN and changes_txt != changes_txt_before:
@@ -136,12 +136,12 @@ class cut_a_release(Task):
             f = codecs.open(ver_path, 'w', 'utf-8')
             f.write(ver_content)
             f.close()
-        
+
         if not DRY_RUN:
             sh.run('git commit %s %s -m "prep for future dev"' % (
                 changes_path, ver_path))
             sh.run('git push')
-    
+
     def _tuple_from_version(self, version):
         def _intify(s):
             try:
@@ -202,6 +202,125 @@ class pypi_upload(Task):
         import webbrowser
         webbrowser.open_new(url)
 
+class blog_release(Task):
+    """Put together a blog post for the latest release."""
+    title = "ANN: python-markdown2 %(version)s -- A fast and complete Python implementation of Markdown"
+    title ="eol %(version)s -- a script and Python module for working with text file end-of-line (EOL) characters",
+
+    body = r"""
+        # Where?
+
+        - Project Page: <http://github.com/trentm/eol>
+        - PyPI: <http://pypi.python.org/pypi/eol/>
+
+        # What's new?
+
+        %(whatsnew)s
+
+        Full changelog: <http://github.com/trentm/eol/tree/master/CHANGES.md#files>
+
+        # What is 'eol'?
+
+        `eol` is both a command-line script `eol` and a Python module `eol` for working
+        with end-of-line chars in text files.
+
+        ## Command line usage
+
+            # list EOL-style of files
+            $ eol *
+            configure: Unix (LF)
+            build.bat: Windows (CRLF)
+            snafu.txt: Mixed, predominantly Unix (LF)
+
+            # find files with a given EOL-style
+            $ eol -f CRLF -x .svn -r ~/src/python
+            /Users/trentm/src/python/Doc/make.bat
+            /Users/trentm/src/python/Lib/email/test/data/msg_26.txt
+            /Users/trentm/src/python/Lib/encodings/cp720.py
+            ...
+
+            # convert EOL-style of files
+            $ eol -c LF foo.c
+            converted `foo.c' to LF EOLs
+
+        ## Module usage
+
+            >>> import eol
+            >>> eol.eol_info_from_path("configure")
+            ('\n', '\n')         # (<detected-eols>, <suggested-eols>)
+            >>> eol.eol_info_from_path("build.bat")
+            ('\r\n', '\r\n')
+            >>> eol.eol_info_from_path("snafu.txt")
+            (<class 'eol.MIXED'>, '\n')
+
+        See the [README](http://github.com/trentm/eol#readme) for full usage
+        information.
+
+        Cheers,
+        Trent
+
+        --
+        Trent Mick
+        trentm@gmail.com
+        http://trentm.com/blog/
+    """
+
+    def _parse_changes_txt(self):
+        changes_md = open(join(self.dir, "CHANGES.md")).read()
+        sections = re.split(r'\n(?=##)', changes_md)
+        for section in sections[1:]:
+            first, tail = section.split('\n', 1)
+            if "not yet released" in first:
+                continue
+            break
+
+        whatsnew_text = tail.strip()
+        version = first.strip().split()[-1]
+        if version.startswith("v"):
+            version = version[1:]
+
+        return version, whatsnew_text
+
+    def make(self):
+        import textwrap
+        import getpass
+        if getpass.getuser() != "trentm":
+            raise RuntimeError("You're not `trentm`. That's not "
+                "expected here.")
+
+        version, whatsnew = self._parse_changes_txt()
+        data = {
+            "whatsnew": whatsnew,
+            "version": version,
+        }
+        body = textwrap.dedent(self.body) % data
+
+        # Ensure all the footer lines end with two spaces: markdown syntax
+        # for <br/>.
+        lines = body.splitlines(False)
+        idx = lines.index("Cheers,") - 1
+        for i in range(idx, len(lines)):
+            lines[i] += '  '
+        body = '\n'.join(lines)
+
+        try:
+            import markdown2
+        except ImportError:
+            sys.path.insert(0, expanduser("~/tm/python-markdown2/lib"))
+            import markdown2
+            del sys.path[0]
+        extras = {
+            "demote-headers": 2,
+        }
+        body_html = markdown2.markdown(body, extras=extras)
+
+        path = "tmp/eol-%s.blog.html" % version
+        f = codecs.open(path, 'w', 'utf-8')
+        f.write(body_html)
+        f.close()
+        self.log.info("wrote `%s'", path)
+
+
 class test(Task):
     """Run all tests (except known failures)."""
     def make(self):
@@ -225,7 +344,7 @@ class test(Task):
         ver_bits = re.split("\.|[^\d]", ver_str, 2)[:2]
         ver = tuple(map(int, ver_bits))
         return ver
-    
+
     def _gen_python_names(self):
         yield "python"
         for ver in [(2,4), (2,5), (2,6), (2,7), (3,0), (3,1)]:
@@ -273,7 +392,7 @@ class todo(Task):
 ## {{{ http://code.activestate.com/recipes/577058/ (r2)
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.
-    
+
     "question" is a string that is presented to the user.
     "default" is the presumed answer if the user just hits <Enter>.
         It must be "yes" (the default), "no" or None (meaning
@@ -337,14 +456,14 @@ def _should_include_path(path, includes, excludes):
 
 def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
     """A version of `os.walk()` with a couple differences regarding symlinks.
-    
+
     1. follow_symlinks=False (the default): A symlink to a dir is
        returned as a *non*-dir. In `os.walk()`, a symlink to a dir is
        returned in the *dirs* list, but it is not recursed into.
     2. follow_symlinks=True: A symlink to a dir is returned in the
        *dirs* list (as with `os.walk()`) but it *is conditionally*
        recursed into (unlike `os.walk()`).
-       
+
        A symlinked dir is only recursed into if it is to a deeper dir
        within the same tree. This is my understanding of how `find -L
        DIR` works.
