@@ -224,7 +224,8 @@ def eol_info_from_path_patterns(path_patterns, recursive=False,
                                           excludes=excludes):
         try:
             fin = open(path, "rb")
-        except EnvironmentError, ex:
+        except EnvironmentError:
+            _, ex, _ = sys.exc_info()
             if ex.errno in (errno.ENOENT, errno.EISDIR) and islink(path):
                 log.debug("skipped `%s': symlink" % path)
                 continue
@@ -399,7 +400,8 @@ def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
     # left to visit.  That logic is copied here.
     try:
         names = os.listdir(top)
-    except OSError, err:
+    except OSError:
+        _, err, _ = sys.exc_info()
         if onerror is not None:
             onerror(err)
         return

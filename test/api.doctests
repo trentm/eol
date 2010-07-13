@@ -1,0 +1,15 @@
+
+>>> import eol
+>>> hasattr(eol, "__version__")
+True
+>>> hasattr(eol, "__version_info__")
+True
+
+>>> eol.LF
+'\n'
+
+>>> hasattr(eol, "eol_info_from_text")
+True
+
+
+# TODO: more

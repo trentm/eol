@@ -202,6 +202,48 @@ class pypi_upload(Task):
         import webbrowser
         webbrowser.open_new(url)
 
+class test(Task):
+    """Run all tests (except known failures)."""
+    def make(self):
+        for ver, python in self._gen_pythons():
+            if ver < (2,3):
+                # Don't support Python < 2.3.
+                continue
+            #elif ver >= (3, 0):
+            #    # Don't yet support Python 3.
+            #    continue
+            ver_str = "%s.%s" % ver
+            print "-- test with Python %s (%s)" % (ver_str, python)
+            assert ' ' not in python
+            sh.run_in_dir("%s test.py -- -knownfailure" % python,
+                join(self.dir, "test"))
+
+    def _python_ver_from_python(self, python):
+        assert ' ' not in python
+        o = os.popen('''%s -c "import sys; print(sys.version)"''' % python)
+        ver_str = o.read().strip()
+        ver_bits = re.split("\.|[^\d]", ver_str, 2)[:2]
+        ver = tuple(map(int, ver_bits))
+        return ver
+    
+    def _gen_python_names(self):
+        yield "python"
+        for ver in [(2,4), (2,5), (2,6), (2,7), (3,0), (3,1)]:
+            yield "python%d.%d" % ver
+            if sys.platform == "win32":
+                yield "python%d%d" % ver
+
+    def _gen_pythons(self):
+        import which  # `pypm|pip install which`
+        python_from_ver = {}
+        for name in self._gen_python_names():
+            for python in which.whichall(name):
+                ver = self._python_ver_from_python(python)
+                if ver not in python_from_ver:
+                    python_from_ver[ver] = python
+        for ver, python in sorted(python_from_ver.items()):
+            yield ver, python
+
 
 class todo(Task):
     """Print out todo's and xxx's in the docs area."""
