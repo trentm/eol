@@ -762,7 +762,7 @@ if __name__ == "__main__":
             log.error(exc_info[0])
         if not skip_it:
             if log.isEnabledFor(logging.DEBUG):
-                print
+                print()
                 traceback.print_exception(*exc_info)
             sys.exit(1)
     else:
