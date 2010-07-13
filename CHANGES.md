@@ -1,6 +1,6 @@
 # eol Changelog
 
-## eol 0.7.4 (not yet released)
+## eol 0.7.4
 
 - Python 3 support (not heavily tested yet)
 - Starter test suite (poor coverage, but better than nothing)
