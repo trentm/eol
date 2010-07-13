@@ -255,14 +255,6 @@ class blog_release(Task):
 
         See the [README](http://github.com/trentm/eol#readme) for full usage
         information.
-
-        Cheers,
-        Trent
-
-        --
-        Trent Mick
-        trentm@gmail.com
-        http://trentm.com/blog/
     """
 
     def _parse_changes_txt(self):
@@ -294,14 +286,6 @@ class blog_release(Task):
             "version": version,
         }
         body = textwrap.dedent(self.body) % data
-
-        # Ensure all the footer lines end with two spaces: markdown syntax
-        # for <br/>.
-        lines = body.splitlines(False)
-        idx = lines.index("Cheers,") - 1
-        for i in range(idx, len(lines)):
-            lines[i] += '  '
-        body = '\n'.join(lines)
 
         try:
             import markdown2
