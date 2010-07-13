@@ -2,7 +2,8 @@
 
 ## eol 0.7.4 (not yet released)
 
-(nothing yet)
+- Python 3 support (not heavily tested yet)
+- Starter test suite (poor coverage, but better than nothing)
 
 ## eol 0.7.3
 
