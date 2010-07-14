@@ -361,6 +361,7 @@ class todo(Task):
                 continue
             line = line.strip('/')
             yield line
+        yield "testlib.py"
     def make(self):
         excludes = list(self.excludes)
         for path in _paths_from_path_patterns(['.'], excludes=excludes):
