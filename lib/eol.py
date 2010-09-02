@@ -8,7 +8,6 @@ Usage:
   eol -c NAME FILE...     # convert file(s) to given EOL-style
   eol -f NAME FILE...     # find files with the given EOL-style
 
-
 `eol` is a tool for working with EOLs in text files: determining the
 EOL type and converting between types. `eol.py` can also be used as
 a Python module.
