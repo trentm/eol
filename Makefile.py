@@ -1,6 +1,6 @@
 
 # This is a Makefile for the `mk` tool. (Limited) details for that here:
-# <http://svn.openkomodo.com/openkomodo/browse/mk>
+# <http://github.com/ActiveState/mk>
 
 import sys
 import os
@@ -671,18 +671,6 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
                 yield path
 ## end of http://code.activestate.com/recipes/577230/ }}}
 
-
-_g_version = None
-def _get_version():
-    global _g_version
-    if _g_version is None:
-        sys.path.insert(0, join(dirname(__file__), "lib"))
-        try:
-            import cmdln
-            _g_version = cmdln.__version__
-        finally:
-            del sys.path[0]
-    return _g_version
 
 def _setup_command_prefix():
     prefix = ""
