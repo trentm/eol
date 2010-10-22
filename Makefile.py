@@ -337,7 +337,11 @@ class test(Task):
                 yield "python%d%d" % ver
 
     def _gen_pythons(self):
-        import which  # `pypm|pip install which`
+        test_dir = join(self.dir, "test")
+        sys.path.insert(0, test_dir)
+        import which
+        sys.path.remove(test_dir)
+
         python_from_ver = {}
         for name in self._gen_python_names():
             for python in which.whichall(name):
