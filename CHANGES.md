@@ -1,5 +1,9 @@
 # eol Changelog
 
+## eol 0.7.6 (not yet released)
+
+(nothing yet)
+
 ## eol 0.7.5
 
 - [Issue #3] Add "dos", "windows" and "unix" aliases for specifying an eol
