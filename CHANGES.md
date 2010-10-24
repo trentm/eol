@@ -2,7 +2,7 @@
 
 ## eol 0.7.6 (not yet released)
 
-(nothing yet)
+- ensure test/*.doctests are in the sdist
 
 ## eol 0.7.5
 
