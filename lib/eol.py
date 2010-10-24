@@ -78,6 +78,11 @@ _eol_from_name = {
     "NATIVE": NATIVE,
     "MIXED" : MIXED,
     "NONE"  : None,
+
+    # Some convenience aliases.
+    "DOS"    : CRLF,
+    "WINDOWS": CRLF,
+    "UNIX"   : LF,
 }
 _name_from_eol = {
     CRLF: "CRLF",
@@ -691,11 +696,13 @@ def main(argv=sys.argv):
         help="run self-test and exit (use 'eol.py -v --test' for verbose test output)")
     parser.add_option("-c", "--convert", metavar="NAME",
         help='convert file(s) to the given EOL; NAME must be one of "LF", '
-            '"CRLF", "CR" or "NATIVE" (case-insensitive)')
+            '"CRLF", "CR", "NATIVE" or the "unix", "dos" or "windows" aliases '
+            '(case-insensitive)')
     parser.add_option("-f", "--find", metavar="NAME",
         help='find and list file(s) with the given EOL-style; '
             'NAME must be one of "LF", "CRLF", "CR", "NATIVE", '
-            '"NONE" or "MIXED" (case-insensitive)')
+            '"NONE", "MIXED" or the "unix", "dos", or "windows" aliases '
+            '(case-insensitive)')
     parser.add_option("-r", "--recursive", action="store_true",
         help='recursively search directories', default=False)
     parser.add_option("-x", "--skip", action="append", metavar="PATTERN",

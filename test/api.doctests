@@ -11,6 +11,19 @@ True
 >>> hasattr(eol, "eol_info_from_text")
 True
 
+>>> eol.eol_from_name('CR')
+'\r'
+>>> eol.eol_from_name('LF')
+'\n'
+>>> eol.eol_from_name('CRLF')
+'\r\n'
+>>> eol.eol_from_name('DOS')
+'\r\n'
+>>> eol.eol_from_name('WINDOWS')
+'\r\n'
+>>> eol.eol_from_name('UNIX')
+'\n'
+
 >>> eol.eol_info_from_text('a\rb\r')
 ('\r', '\r')
 

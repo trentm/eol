@@ -50,7 +50,7 @@ Recursively:
 
 **Find files** with the given EOL-style:
 
-    $ eol -f crlf -x .svn -r ~/src/python
+    $ eol -f dos -x .svn -r ~/src/python
     /Users/trentm/src/python/Doc/make.bat
     /Users/trentm/src/python/Lib/email/test/data/msg_26.txt
     /Users/trentm/src/python/Lib/encodings/cp720.py
