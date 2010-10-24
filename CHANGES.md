@@ -1,6 +1,6 @@
 # eol Changelog
 
-## eol 0.7.5 (not yet released)
+## eol 0.7.5
 
 - [Issue #3] Add "dos", "windows" and "unix" aliases for specifying an eol
   style. E.g. can now do `eol -c dos foo.bat` to convert to DOS-style EOLs.
