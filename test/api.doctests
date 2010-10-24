@@ -11,5 +11,28 @@ True
 >>> hasattr(eol, "eol_info_from_text")
 True
 
+>>> eol.eol_info_from_text('a\rb\r')
+('\r', '\r')
 
-# TODO: more
+# Create some temp files.
+>>> import tempfile
+>>> from os.path import join
+>>> d = tempfile.mkdtemp()
+>>> cr_path = join(d, "cr.tmp")
+>>> open(cr_path, 'wb').write('a\rb\r')
+>>> lf_path = join(d, "lf.tmp")
+>>> open(lf_path, 'wb').write('a\nb\n')
+>>> crlf_path = join(d, "crlf.tmp")
+>>> open(crlf_path, 'wb').write('a\r\nb\r\n')
+
+>>> list( eol.eol_info_from_path_patterns([join(d, '*.tmp')]) ) == [
+...    (join(d, 'cr.tmp'), '\r', '\r'),
+...    (join(d, 'crlf.tmp'), '\r\n', '\r\n'),
+...    (join(d, 'lf.tmp'), '\n', '\n')]
+... ]
+True
+
+
+# Clean up
+>>> import shutil
+>>> shutil.rmtree(d)
