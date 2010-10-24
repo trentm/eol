@@ -12,12 +12,10 @@ try:
     import eol
 finally:
     del sys.path[0]
-README = open(os.path.join(_top_dir, 'README.md')).read()
 
 setup(name='eol',
     version=eol.__version__,
     description="a command-line script and Python module for working with text file end-of-line (EOL) characters",
-    long_description=README,
     classifiers=[c.strip() for c in """
         Development Status :: 5 - Production/Stable
         Environment :: Console
