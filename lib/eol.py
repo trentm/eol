@@ -86,6 +86,17 @@ _name_from_eol = {
 }
 
 
+# Python 2/3 compat
+try:
+    _BASESTRING = basestring
+except NameError:
+    _BASESTRING = str
+if sys.version_info[0] > 2:
+    _BYTES_NULL = bytes([0])
+else:
+    _BYTES_NULL = '\0'
+
+
 
 #---- public module interface
 
@@ -168,9 +179,14 @@ def eol_info_from_text(text):
         >>> eol_info_from_text('\nfoo\nbar\r\n') == (MIXED, '\n')  # mixed text
         True
     """
-    numCRLFs = text.count("\r\n")
-    numCRs   = text.count("\r") - numCRLFs
-    numLFs   = text.count("\n") - numCRLFs
+    if sys.version_info[0] > 2 and type(text) == bytes:
+        numCRLFs = text.count(bytes([13, 10]))
+        numCRs   = text.count(bytes([13])) - numCRLFs
+        numLFs   = text.count(bytes([10])) - numCRLFs
+    else:
+        numCRLFs = text.count("\r\n")
+        numCRs   = text.count("\r") - numCRLFs
+        numLFs   = text.count("\n") - numCRLFs
 
     if numCRLFs == numLFs == numCRs == 0:
         return (None, NATIVE)
@@ -215,7 +231,7 @@ def eol_info_from_path_patterns(path_patterns, recursive=False,
     See eol_info_from_text() docstring for details.
     """
     from os.path import islink
-    assert not isinstance(path_patterns, basestring), \
+    assert not isinstance(path_patterns, _BASESTRING), \
         "'path_patterns' must be a sequence, not a string: %r" % path_patterns
     for path in _paths_from_path_patterns(path_patterns,
                                           recursive=recursive,
@@ -233,7 +249,7 @@ def eol_info_from_path_patterns(path_patterns, recursive=False,
             content = fin.read()
         finally:
             fin.close()
-        if '\0' in content:
+        if _BYTES_NULL in content:
             log.debug("skipped `%s': binary file (null in content)" % path)
             continue
         eol, suggested_eol = eol_info_from_text(content)
@@ -268,7 +284,7 @@ def convert_path_eol(path, eol, skip_binary_content=True, log=log):
         original = fin.read()
     finally:
         fin.close()
-    if skip_binary_content and '\0' in original:
+    if skip_binary_content and _BYTES_NULL in original:
         log.debug("skipped `%s': binary file (null in content)" % path)
         return
     converted = convert_text_eol(original, eol)
@@ -288,7 +304,7 @@ def convert_path_patterns_eol(path_patterns, eol, recursive=False,
     """Convert the given paths (in-place) to the given EOL.  If no
     changes are necessary the file is not touched.
     """
-    assert not isinstance(path_patterns, basestring), \
+    assert not isinstance(path_patterns, _BASESTRING), \
         "'path_patterns' must be a sequence, not a string: %r" % path_patterns
     for path in _paths_from_path_patterns(path_patterns,
                                           recursive=recursive,
@@ -524,7 +540,7 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
                         lexists, islink, realpath
     from glob import glob
 
-    assert not isinstance(path_patterns, basestring), \
+    assert not isinstance(path_patterns, _BASESTRING), \
         "'path_patterns' must be a sequence, not a string: %r" % path_patterns
     if includes is None: includes = []
     if excludes is None: excludes = []

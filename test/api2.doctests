@@ -1,0 +1,8 @@
+# Some tests for Python 2-only syntax.
+
+>>> import eol
+>>> eol.eol_info_from_text('a\rb\r')
+('\r', '\r')
+>>> eol.eol_info_from_text(u'a\rb\r')
+('\r', '\r')
+

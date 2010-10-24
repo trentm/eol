@@ -2,7 +2,7 @@
 
 ## eol 0.7.5 (not yet released)
 
-(nothing yet)
+- [Issue #4] Fix a few Python 3 compat issues, add some more test cases.
 
 ## eol 0.7.4
 

@@ -14,16 +14,23 @@ True
 >>> eol.eol_info_from_text('a\rb\r')
 ('\r', '\r')
 
+
 # Create some temp files.
->>> import tempfile
+>>> import tempfile, sys
 >>> from os.path import join
 >>> d = tempfile.mkdtemp()
 >>> cr_path = join(d, "cr.tmp")
->>> open(cr_path, 'wb').write('a\rb\r')
 >>> lf_path = join(d, "lf.tmp")
->>> open(lf_path, 'wb').write('a\nb\n')
 >>> crlf_path = join(d, "crlf.tmp")
->>> open(crlf_path, 'wb').write('a\r\nb\r\n')
+>>> if sys.version_info[0] <= 2:
+...     open(cr_path, 'wb').write('a\rb\r')
+...     open(lf_path, 'wb').write('a\nb\n')
+...     open(crlf_path, 'wb').write('a\r\nb\r\n')
+... else:
+...     _ = open(cr_path, 'wb').write(bytes('a\rb\r', 'ascii'))
+...     _ = open(lf_path, 'wb').write(bytes('a\nb\n', 'ascii'))
+...     _ = open(crlf_path, 'wb').write(bytes('a\r\nb\r\n', 'ascii'))
+
 
 >>> list( eol.eol_info_from_path_patterns([join(d, '*.tmp')]) ) == [
 ...    (join(d, 'cr.tmp'), '\r', '\r'),
