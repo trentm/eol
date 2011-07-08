@@ -2,10 +2,24 @@
 <!-- Komodo Project File - DO NOT EDIT -->
 <project id="c4db773b-590a-5b43-9e07-2a6479747154" kpf_version="5" name="eol.komodoproject">
 <preference-set idref="c4db773b-590a-5b43-9e07-2a6479747154">
+  <string id="currentInvocationLanguage">PHP</string>
+  <string relative="path" id="import_dirname"></string>
   <string id="import_exclude_matches">.git;*.*~;*.bak;*.tmp;CVS;.#*;*.pyo;*.pyc;.svn;*%*;tmp*.html;.DS_Store;build;tmp</string>
   <string id="import_include_matches"></string>
   <boolean id="import_live">1</boolean>
   <boolean id="import_recursive">1</boolean>
   <string id="import_type">useFolders</string>
+  <string id="javascriptExtraPaths"></string>
+  <string id="language">PHP</string>
+  <string id="lastInvocation"></string>
+  <string id="lastTestPlanName_pref">New test plan #1</string>
+  <string id="mappedPaths"></string>
+<preference-set id="testPlans">
+<preference-set id="New test plan #1">
+  <string id="command_line"></string>
+  <string relative="url" id="directory"></string>
+  <string id="language">Perl - TAP (*.t)</string>
+</preference-set>
+</preference-set>
 </preference-set>
 </project>

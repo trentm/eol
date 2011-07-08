@@ -45,6 +45,9 @@ class cut_a_release(Task):
         r'(?P<body>.*?)(?=^##|\Z)' % proj_name, re.M | re.S)
 
     def make(self):
+        import codecs
+        from mklib import sh, mk
+
         DRY_RUN = False
         version = self._get_version()
 
@@ -95,7 +98,8 @@ class cut_a_release(Task):
                 % (changes_path, version), self.log.debug)
 
         # Tag version and push.
-        curr_tags = set(t for t in _capture_stdout(["git", "tag", "-l"]).split('\n') if t)
+        curr_tags = set(t for t in
+            self._capture_stdout(["git", "tag", "-l"]).split('\n') if t)
         if not DRY_RUN and version not in curr_tags:
             self.log.info("tag the release")
             sh.run('git tag -a "%s" -m "version %s"' % (version, version),
@@ -141,6 +145,11 @@ class cut_a_release(Task):
             sh.run('git commit %s %s -m "prep for future dev"' % (
                 changes_path, ver_path))
             sh.run('git push')
+
+    def _capture_stdout(self, argv):
+        import subprocess
+        p = subprocess.Popen(argv, stdout=subprocess.PIPE)
+        return p.communicate()[0]
 
     def _tuple_from_version(self, version):
         def _intify(s):
