@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2005-2010 ActiveState Software Inc.
-    
+
 """eol -- a tool for working with EOLs in text files
 
 Usage:
@@ -11,7 +11,7 @@ Usage:
 `eol` is a tool for working with EOLs in text files: determining the
 EOL type and converting between types. `eol.py` can also be used as
 a Python module.
-  
+
 By default with the command-line interface, binary files are skipped
 where "binary files" is any file with a null in the content (not perfect).
 
@@ -168,13 +168,13 @@ def name_from_eol(eol):
 
 def eol_info_from_text(text):
     r"""eol_info_from_text(TEXT) -> (EOL, SUGGESTED-EOL)
-    
+
     Return a 2-tuple containing:
     1) The detected end-of-line: one of CR, LF, CRLF, MIXED or None.
     2) The suggested end-of-line to use for this text: one of CR, LF or
        CRLF. This is the typically the most common EOL used in the text,
        preferring the native EOL when ambiguous.
-    
+
         >>> eol_info_from_text('foo\nbar')
         ('\n', '\n')
         >>> eol_info_from_text('foo\r\nbar')
@@ -209,7 +209,7 @@ def eol_info_from_text(text):
 
 def eol_info_from_stream(stream):
     """eol_info_from_stream(STREAM) -> (EOL, SUGGESTED-EOL)
-    
+
     Return EOL info for the given file stream.
     See eol_info_from_text() docstring for details.
     """
@@ -217,7 +217,7 @@ def eol_info_from_stream(stream):
 
 def eol_info_from_path(path):
     """eol_info_from_stream(PATH) -> (EOL, SUGGESTED-EOL)
-    
+
     Return EOL info for the given file path.
     See eol_info_from_text() docstring for details.
     """
@@ -226,12 +226,12 @@ def eol_info_from_path(path):
         content = fin.read()
     finally:
         fin.close()
-    return eol_info_from_text(content) 
+    return eol_info_from_text(content)
 
 def eol_info_from_path_patterns(path_patterns, recursive=False,
                                 includes=[], excludes=[]):
     """Generate EOL info for the given paths.
-    
+
     Yields 3-tuples: (PATH, EOL, SUGGESTED-EOL)
     See eol_info_from_text() docstring for details.
     """
@@ -275,12 +275,12 @@ def convert_text_eol(text, eol):
     if eol not in (LF, CRLF, CR):
         raise ValueError("illegal EOL: %r" % eol)
     import re
-    return re.sub('\r\n|\r|\n', eol, text)
+    return re.sub(b'\r\n|\r|\n', bytes(eol, 'utf-8'), text)
 
 
 def convert_path_eol(path, eol, skip_binary_content=True, log=log):
     """convert_path_eol(PATH, EOL)
-    
+
     Convert the given file (in-place) to the given EOL. If no
     changes are necessary the file is not touched.
     """
@@ -319,12 +319,12 @@ def convert_path_patterns_eol(path_patterns, eol, recursive=False,
 
 def mixed_eol_lines_in_text(text, eol=None):
     r"""mixed_eol_lines_in_text(TEXT[, EOL]) -> LINE-NUMBERS...
-    
+
         "text" is the text to analyze
         "eol" indicates the expected EOL for each line: one of LF,
             CR or CRLF. It may also be left out (or None) to indicate
             that the most common EOL in the text is the expected one.
-    
+
     Return a list of line numbers (0-based) with an EOL that does not
     match the expected EOL.
 
@@ -349,7 +349,7 @@ def mixed_eol_lines_in_text(text, eol=None):
                     (len(LFs),   LF   == NATIVE, LF)]
         eol_data.sort() # last in list is the most common, native EOL on a tie
         eol = eol_data[-1][-1]
-    
+
     # Get the list of lines with unexpected EOLs.
     if eol == LF:
         mixed_eol_lines = CRs + CRLFs
@@ -398,14 +398,14 @@ def _should_include_path(path, includes, excludes):
 
 def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
     """A version of `os.walk()` with a couple differences regarding symlinks.
-    
+
     1. follow_symlinks=False (the default): A symlink to a dir is
        returned as a *non*-dir. In `os.walk()`, a symlink to a dir is
        returned in the *dirs* list, but it is not recursed into.
     2. follow_symlinks=True: A symlink to a dir is returned in the
        *dirs* list (as with `os.walk()`) but it *is conditionally*
        recursed into (unlike `os.walk()`).
-       
+
        A symlinked dir is only recursed into if it is to a deeper dir
        within the same tree. This is my understanding of how `find -L
        DIR` works.
@@ -598,7 +598,7 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
                 # not:
                 #   script -r --include="*.py" DIR
                 if recursive and _should_include_path(path, [], excludes):
-                    for dirpath, dirnames, filenames in _walk(path, 
+                    for dirpath, dirnames, filenames in _walk(path,
                             follow_symlinks=follow_symlinks):
                         dir_indeces_to_remove = []
                         for i, dirname in enumerate(dirnames):
@@ -633,7 +633,7 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
 # Recipe: pretty_logging (0.1.2)
 class _PerLevelFormatter(logging.Formatter):
     """Allow multiple format string -- depending on the log level.
-    
+
     A "fmtFromLevel" optional arg is added to the constructor. It can be
     a dictionary mapping a log record level to a format string. The
     usual "fmt" argument acts as the default.
@@ -740,7 +740,7 @@ def main(argv=sys.argv):
                 in eol_info_from_path_patterns(path_patterns, opts.recursive,
                     excludes=opts.skip):
             if eol is MIXED:
-                log.info("%s: %s, predominantly %s", path, 
+                log.info("%s: %s, predominantly %s", path,
                     english_name_from_eol(eol),
                     english_name_from_eol(suggested_eol))
             else:
@@ -754,7 +754,7 @@ def main(argv=sys.argv):
                 path_patterns, opts.recursive, excludes=opts.skip):
             if path_eol == eol:
                 log.info("%s", path)
-    
+
     return 0
 
 ## {{{ http://code.activestate.com/recipes/577258/ (r4)
